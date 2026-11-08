@@ -1,0 +1,28 @@
+# Self-scrapes Prometheus three times under three fake namespaces, so the
+# compose stack has real per-namespace series (up, prometheus_* metrics)
+# without needing a cluster: enough to exercise the Gateway's namespace
+# injection end to end.
+global:
+  scrape_interval: 5s
+
+scrape_configs:
+  - job_name: shop
+    static_configs:
+      - targets: ["localhost:9090"]
+    relabel_configs:
+      - target_label: namespace
+        replacement: shop
+
+  - job_name: payments
+    static_configs:
+      - targets: ["localhost:9090"]
+    relabel_configs:
+      - target_label: namespace
+        replacement: payments
+
+  - job_name: kube-system
+    static_configs:
+      - targets: ["localhost:9090"]
+    relabel_configs:
+      - target_label: namespace
+        replacement: kube-system

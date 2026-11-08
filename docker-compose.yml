@@ -1,0 +1,37 @@
+# Local stack to exercise the Gateway's Prometheus read path end to end,
+# against a real Prometheus instead of an httptest fake. Not for production:
+# the Gateway runs with OPSKIT_DEV_INSECURE_AUTH=1 here, trusting the
+# X-OpsKit-Dev-User/-Groups headers set by gateway/deploy/smoke.sh.
+#
+#   docker compose up --build
+#   ./gateway/deploy/smoke.sh
+
+services:
+  prometheus:
+    image: prom/prometheus:v3.15.1
+    volumes:
+      - ./gateway/deploy/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    ports:
+      - "9090:9090"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:9090/-/ready"]
+      interval: 2s
+      timeout: 2s
+      retries: 15
+
+  gateway:
+    build:
+      context: ./gateway
+    environment:
+      OPSKIT_DEV_INSECURE_AUTH: "1"
+      OPSKIT_ADDR: ":8080"
+      OPSKIT_ACCESS_FILE: "/etc/opskit/access.yaml"
+      OPSKIT_PROM_URL: "http://prometheus:9090"
+      OPSKIT_PROM_SYSTEM: "Prometheus · docker compose"
+    volumes:
+      - ./gateway/deploy/access.yaml:/etc/opskit/access.yaml:ro
+    ports:
+      - "8080:8080"
+    depends_on:
+      prometheus:
+        condition: service_healthy

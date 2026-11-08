@@ -1,0 +1,7 @@
+# Static identity -> namespace mapping for the docker-compose test stack.
+# Stands in for SelfSubjectAccessReview until that lands.
+users:
+  yoni: [shop]
+  dana: [payments]
+groups:
+  sre: [shop, payments, kube-system]
