@@ -11,9 +11,11 @@
     "build": "turbo run build",
     "dev": "pnpm --filter @opskit/playground dev",
     "test": "turbo run test",
-    "typecheck": "turbo run typecheck"
+    "typecheck": "turbo run typecheck",
+    "screenshot": "node scripts/screenshot.mjs"
   },
   "devDependencies": {
+    "playwright": "1.63.0",
     "turbo": "2.11.10",
     "typescript": "5.9.3"
   }

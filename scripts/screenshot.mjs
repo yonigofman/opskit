@@ -1,0 +1,75 @@
+#!/usr/bin/env node
+// Screenshots the built playground in dark and light theme and reports console errors.
+// Usage: pnpm build && node scripts/screenshot.mjs
+// First time on a new machine: pnpm exec playwright install chromium
+import { spawn } from "node:child_process";
+import { existsSync, mkdirSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
+import { chromium } from "playwright";
+
+const root = join(dirname(fileURLToPath(import.meta.url)), "..");
+const outDir = join(root, ".screenshots");
+const port = Number(process.env.OPSKIT_PREVIEW_PORT ?? 4174);
+const url = `http://localhost:${port}/`;
+
+if (!existsSync(join(root, "apps/playground/dist/index.html"))) {
+  console.error("apps/playground/dist is missing. Run `pnpm build` first.");
+  process.exit(1);
+}
+mkdirSync(outDir, { recursive: true });
+
+const server = spawn("pnpm", ["--filter", "@opskit/playground", "exec", "vite", "preview", "--port", String(port), "--strictPort"], {
+  cwd: root,
+  stdio: "ignore",
+});
+
+let exitCode = 0;
+try {
+  await waitFor(url, 20_000);
+  const browser = await chromium.launch();
+  const page = await browser.newPage({ viewport: { width: 1360, height: 900 } });
+  const problems = [];
+  page.on("console", (m) => {
+    if (m.type() === "error") problems.push(`console error: ${m.text()}`);
+  });
+  page.on("pageerror", (e) => problems.push(`page error: ${e.message}`));
+
+  await page.goto(url);
+  // Let the recorded answer finish streaming, the mock Gateway answer, and the stale example fail a refresh.
+  await page.waitForTimeout(7000);
+  await page.screenshot({ path: join(outDir, "dark.png"), fullPage: true });
+
+  await page.getByRole("button", { name: /light theme/i }).click();
+  await page.waitForTimeout(800);
+  await page.screenshot({ path: join(outDir, "light.png"), fullPage: true });
+  await browser.close();
+
+  console.log(`Wrote ${join(outDir, "dark.png")} and ${join(outDir, "light.png")}`);
+  if (problems.length > 0) {
+    console.error(problems.join("\n"));
+    exitCode = 1;
+  } else {
+    console.log("No console errors.");
+  }
+} catch (err) {
+  console.error(err instanceof Error ? err.message : err);
+  exitCode = 1;
+} finally {
+  server.kill();
+}
+process.exit(exitCode);
+
+async function waitFor(target, timeoutMs) {
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    try {
+      const res = await fetch(target);
+      if (res.ok) return;
+    } catch {
+      // not up yet
+    }
+    await new Promise((r) => setTimeout(r, 250));
+  }
+  throw new Error(`Playground preview did not start on ${target}`);
+}

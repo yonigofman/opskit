@@ -86,6 +86,18 @@ pnpm typecheck
 cd gateway && go test ./...
 ```
 
+## Developing with Claude Code
+
+The repo is set up for Claude Code:
+
+- `CLAUDE.md`: architecture, invariants, conventions and current status
+- `docs/spec.md`: the full v1 spec
+- `.claude/skills/`: `add-opskit-component`, `add-gateway-tool`, `verify-opskit`, `openui-lang`
+- `.claude/agents/opskit-reviewer.md`: reviews a diff against the invariants
+- `pnpm screenshot`: renders the playground in both themes into `.screenshots/` (first run: `pnpm exec playwright install chromium`)
+
+Try: "Add StatTile using the add-opskit-component skill".
+
 ## License
 
 Apache-2.0
