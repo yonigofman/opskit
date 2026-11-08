@@ -30,6 +30,14 @@ const CART_RPS = 'sum(rate(http_requests_total{namespace=\\"shop\\", app=\\"cart
 const PAYMENTS_P95 =
   'histogram_quantile(0.95, sum by (le) (rate(http_request_duration_seconds_bucket{namespace=\\"payments\\"}[5m])))';
 
+// The compose scenario's queries hit metrics the docker-compose Prometheus
+// really has (it scrapes itself under the namespaces shop, payments and
+// kube-system), so the chat's "live Gateway" toggle shows real data there.
+const COMPOSE_RPS = "sum(rate(prometheus_http_requests_total[5m]))";
+const COMPOSE_BY_HANDLER = "topk(3, rate(prometheus_http_requests_total[5m]))";
+const COMPOSE_MEM = "process_resident_memory_bytes";
+const COMPOSE_SERIES = "prometheus_tsdb_head_series";
+
 const unescape = (q: string) => q.replaceAll('\\"', '"');
 
 export const scenarios: Scenario[] = [
@@ -90,6 +98,28 @@ export const scenarios: Scenario[] = [
       'title = Heading("I can\'t see payments with your access")',
       `tile = StatTile("p95 latency · payments", "${PAYMENTS_P95}", "1h", "s", 0.3, 0.5)`,
       'why = Text("Your account can read shop and shop-staging, not payments. Ask a payments namespace admin for the view role, or ask someone who has it.")',
+    ].join("\n"),
+  },
+  {
+    id: "compose",
+    prompt: "Is the local stack healthy?",
+    reasoning:
+      "This one asks about the Prometheus behind the Gateway itself, so I'll read its own metrics: is the target up, how many requests it serves, how much memory it holds and how many series are in its head block. Those exist in the docker compose stack, so the answer stays live when the Gateway is real.",
+    tools: [
+      { title: "Querying Prometheus · target up", tool: "prom_instant", input: "up", output: "1 · the scrape target is up", durationMs: 320 },
+      { title: "Querying Prometheus · request rate", tool: "prom_instant", input: COMPOSE_RPS, output: "1.3 req/s", durationMs: 410 },
+      { title: "Querying Prometheus · head series", tool: "prom_instant", input: COMPOSE_SERIES, output: "2.1k series", durationMs: 380 },
+      { title: "Querying Prometheus · memory", tool: "prom_range", input: COMPOSE_MEM, output: "1 series · flat at 119 MiB", durationMs: 450 },
+    ],
+    answer: [
+      "root = Stack([title, tiles, traffic, memory, why])",
+      'title = Heading("The local stack is up and idle")',
+      "tiles = Row([uptile, rpstile])",
+      'uptile = StatTile("Scrape target up", "up", "1h")',
+      `rpstile = StatTile("Prometheus requests", "${COMPOSE_RPS}", "1h", "req/s")`,
+      `traffic = PromChart("Busiest handlers", "${COMPOSE_BY_HANDLER}", "1h", "req/s")`,
+      `memory = PromChart("Prometheus memory", "${COMPOSE_MEM}", "1h", "B")`,
+      'why = Text("Every panel here reads the Prometheus that sits behind the Gateway, so these queries resolve against the docker compose stack. Switch the header badge to live Gateway with that stack running and they all refetch for real, scoped to the namespaces you can read.")',
     ].join("\n"),
   },
 ];

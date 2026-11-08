@@ -35,4 +35,12 @@ The Gateway is the only code that touches the cluster. Read `docs/spec.md` (Gate
 cd gateway && gofmt -l . && go vet ./... && go test -race ./...
 ```
 
-Then run the `verify-opskit` skill for the TypeScript side.
+Then exercise it for real against the local stack, because unit tests use fakes:
+
+```bash
+docker compose up --build -d   # Prometheus + Gateway on :8080
+./gateway/deploy/smoke.sh
+```
+
+For a Prometheus tool, the playground's probe page (Probe tab) runs arbitrary PromQL through the Gateway as
+any identity and shows what it rewrote. Then run the `verify-opskit` skill for the TypeScript side.

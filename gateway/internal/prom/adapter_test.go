@@ -241,6 +241,39 @@ func TestSpecsDecodeRawJSON(t *testing.T) {
 	}
 }
 
+func TestPromRangeDropsNonFiniteSamples(t *testing.T) {
+	f := &fakeProm{}
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		f.mu.Lock()
+		f.queries = append(f.queries, r.URL.Query().Get("query"))
+		f.mu.Unlock()
+		w.Header().Set("Content-Type", "application/json")
+		fmt.Fprint(w, `{"status":"success","data":{"resultType":"matrix","result":[
+			{"metric":{"__name__":"up"},"values":[[1000,"1"],[1015,"NaN"],[1030,"+Inf"],[1045,"2"]]}
+		]}}`)
+	}))
+	defer srv.Close()
+
+	a := newTestAdapter(srv.URL, resolverFunc(func(context.Context, access.Identity) ([]string, error) {
+		return []string{"shop"}, nil
+	}))
+
+	result, err := a.rangeHandler(context.Background(), access.Identity{User: "yoni"}, PromRangeArgs{
+		Query: "up", Start: 0, End: 60, Step: 15,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	// NaN and +Inf have no JSON form: carrying them would make the whole
+	// response unencodable, so they come back as gaps.
+	if len(result.Series) != 1 || len(result.Series[0].Values) != 2 {
+		t.Fatalf("got %+v, want only the two finite samples", result.Series)
+	}
+	if _, err := json.Marshal(result); err != nil {
+		t.Fatalf("the result must always be encodable: %v", err)
+	}
+}
+
 func TestPromRangeCacheHitReportsTheCallersOwnIdentity(t *testing.T) {
 	_, url := newFakeProm(t)
 	// Both users resolve to the same namespaces, so they share one cache entry.

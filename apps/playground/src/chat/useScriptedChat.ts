@@ -102,15 +102,21 @@ export function useScriptedChat() {
       at(t, () => update(id, (turn) => ({ tools: setStatus(turn.tools, index, "done") })));
     });
 
-    // The answer: OpenUI Lang, streamed so components mount and fetch while it's written.
+    // The answer: OpenUI Lang, streamed so components mount and fetch while it's
+    // written. Only whole lines are handed to the Renderer: a statement mounts as
+    // its line completes, so a half-written query never reaches the Gateway.
     t += 200;
     at(t, () => update(id, () => ({ phase: "answering" })));
+    let sent = "";
     for (let i = 12; i < scenario.answer.length + 12; i += 12) {
       t += 20;
-      const answer = scenario.answer.slice(0, i);
-      at(t, () => update(id, () => ({ answer })));
+      const typed = scenario.answer.slice(0, i);
+      const complete = typed.slice(0, typed.lastIndexOf("\n") + 1);
+      if (complete === sent) continue;
+      sent = complete;
+      at(t, () => update(id, () => ({ answer: complete })));
     }
-    at(t + 50, () => update(id, () => ({ phase: "done" })));
+    at(t + 50, () => update(id, () => ({ answer: scenario.answer, phase: "done" })));
   }
 
   return { turns, busy, send, reset };

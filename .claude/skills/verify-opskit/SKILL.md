@@ -20,6 +20,7 @@ node scripts/screenshot.mjs
 
 - `chat-dark.png` / `chat-light.png`: the "Why is checkout slow?" chat after the agent finished;
 - `gallery-dark.png` / `gallery-light.png`: every component in every state;
+- `probe-dark.png` / `probe-light.png`: the PromQL probe form, before any run;
 - console errors, printed (anything printed there is a failure).
 
 ## Look at the screenshots
@@ -36,6 +37,20 @@ Open both PNGs with the Read tool and check:
 - Text is readable in light theme (no light-on-light).
 
 If a component you changed is not in the playground yet, add it there first (see `add-opskit-component`, step 6).
+
+## If you changed the Gateway
+
+Screenshots run on the mock, so they prove nothing about the Gateway. Exercise it for real:
+
+```bash
+docker compose up --build -d
+./gateway/deploy/smoke.sh    # must end "N passed, 0 failed"
+docker compose down
+```
+
+For a query-level change, also open the playground's probe page against that stack (`pnpm dev`, Probe tab)
+and run its examples: they cover ready, empty and invalid_query, and changing "Run as" to an unmapped user
+covers forbidden.
 
 ## Report
 

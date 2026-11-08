@@ -11,8 +11,10 @@ gateway/            Go Tools API. Only thing that talks to Kubernetes / Promethe
 packages/core/      @opskit/core, headless: Transport, hooks, prop schemas (zod), types
 packages/ui/        @opskit/ui, shadcn-native: OpsKit components (src/components/opskit), vendored shadcn
                     primitives (src/components/ui), OpenUI library, registry.json. Consumed from source.
-apps/playground/    Vite + Tailwind v4 demo on a mock Gateway: an AI Elements-style agent chat (src/chat)
-                    and a gallery of every component state (src/Gallery.tsx, src/fixtures.ts)
+apps/playground/    Vite + Tailwind v4 demo: an AI Elements-style agent chat (src/chat), a gallery of every
+                    component state (src/Gallery.tsx, src/fixtures.ts) and a PromQL probe against a real
+                    Gateway (src/Probe.tsx). Chat and gallery run on the mock; probe is always live.
+docker-compose.yml  Local stack to exercise the Gateway for real: Prometheus + the Gateway. Dev auth only.
 docs/spec.md        v1 spec: catalog, Tools API, states, security, budgets, milestones
 ```
 
@@ -25,8 +27,17 @@ pnpm test                   # vitest in core + ui
 pnpm typecheck
 pnpm dev                    # playground at http://localhost:5173
 cd gateway && go vet ./... && go test ./... && gofmt -l .
-node scripts/screenshot.mjs # serves apps/playground/dist; chat + gallery, dark + light, into .screenshots/
+node scripts/screenshot.mjs # serves apps/playground/dist; chat, gallery and probe, dark + light, into .screenshots/
+
+docker compose up --build -d    # Prometheus (self-scraped as namespaces shop/payments/kube-system) + Gateway on :8080
+./gateway/deploy/smoke.sh       # end-to-end checks: scoping, escape attempts, forbidden, cache, prom_range
+docker compose down
 ```
+
+With that stack up, the playground's **probe** page (`pnpm dev`, then the Probe tab) runs arbitrary PromQL
+through the real Gateway as any identity. The chat's header badge toggles from mock to live; the
+"Is the local stack healthy?" scenario is the one whose queries exist in that stack, so it keeps showing
+data when live (the others ask about `checkout`, which only the fixtures have).
 
 After changing `packages/core`, rebuild it (`pnpm --filter @opskit/core build`) before testing `packages/ui` or the playground: they resolve `@opskit/core` through its `dist`.
 
@@ -67,9 +78,12 @@ After changing `packages/core`, rebuild it (`pnpm --filter @opskit/core build`) 
 | core: transport, dedupe, mock, `usePromRange` | done |
 | ui: `PromChart`, `StatTile`, panel, states, provenance, OpenUI library (shadcn-native) | done |
 | playground: AI Elements-style chat with scripted agent turns + states gallery | done |
+| playground: PromQL probe page against a live Gateway, with a per-identity transport | done |
 | registry: `shadcn build` output in `packages/ui/public/r` (the URLs in registry.json) | not yet |
 | gateway: Tools API skeleton + error contract | done |
-| gateway: auth (OIDC + impersonation), Prometheus/Mimir adapter with namespace injection | next (M1) |
+| gateway: Prometheus/Mimir adapter, AST namespace injection, scope-keyed cache, CORS, static YAML access map | done (M1) |
+| gateway: auth (OIDC + impersonation), `SelfSubjectAccessReview` in place of the static map | next (M1) |
+| gateway: `k8s_list` + informer cache, Loki adapter | M1/M2 |
 | PodTable, LogTail, EventTimeline, ActionButton | designed, not built |
 | MCP server + agent evals | M4 |
 

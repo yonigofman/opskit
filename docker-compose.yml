@@ -11,6 +11,8 @@ services:
     image: prom/prometheus:v3.15.1
     volumes:
       - ./gateway/deploy/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      # Keep history across restarts, so charts aren't empty after a `down`.
+      - prometheus-data:/prometheus
     ports:
       - "9090:9090"
     healthcheck:
@@ -37,3 +39,6 @@ services:
     depends_on:
       prometheus:
         condition: service_healthy
+
+volumes:
+  prometheus-data:

@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"math"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -23,6 +24,9 @@ type apiEnvelope struct {
 	Error     string          `json:"error"`
 }
 
+// apiResult covers the vector and matrix result types, where result is a
+// list of series. The scalar and string types put a bare [ts, value] pair in
+// result instead, so they are decoded separately: see decodeInstant.
 type apiResult struct {
 	ResultType string `json:"resultType"`
 	Result     []struct {
@@ -30,6 +34,15 @@ type apiResult struct {
 		Value  [2]json.RawMessage     `json:"value"`  // instant
 		Values []([2]json.RawMessage) `json:"values"` // range
 	} `json:"result"`
+}
+
+// resultTypeOf reads just the resultType, before committing to a shape for result.
+func resultTypeOf(data json.RawMessage) string {
+	var head struct {
+		ResultType string `json:"resultType"`
+	}
+	_ = json.Unmarshal(data, &head)
+	return head.ResultType
 }
 
 // queryRange calls /api/v1/query_range and returns one series per result.
@@ -57,6 +70,11 @@ func (u *upstream) queryRange(ctx context.Context, query string, start, end, ste
 			if err != nil {
 				return nil, err
 			}
+			// NaN and ±Inf are ordinary PromQL outcomes but have no JSON
+			// representation; a gap is what the chart should show anyway.
+			if math.IsNaN(v) || math.IsInf(v, 0) {
+				continue
+			}
 			values = append(values, [2]float64{t, v})
 		}
 		out = append(out, rawSeries{labels: r.Metric, values: values})
@@ -65,12 +83,31 @@ func (u *upstream) queryRange(ctx context.Context, query string, start, end, ste
 }
 
 // queryInstant calls /api/v1/query and returns the first series' value, or
-// nil if the query matched nothing.
+// nil if the query matched nothing or evaluated to NaN.
 func (u *upstream) queryInstant(ctx context.Context, query string) (*float64, error) {
 	data, err := u.do(ctx, "/api/v1/query", url.Values{"query": {query}})
 	if err != nil {
 		return nil, err
 	}
+	return decodeInstant(data)
+}
+
+func decodeInstant(data json.RawMessage) (*float64, error) {
+	// scalar() and string literals answer with a bare [ts, value] pair.
+	if t := resultTypeOf(data); t == "scalar" || t == "string" {
+		var bare struct {
+			Result [2]json.RawMessage `json:"result"`
+		}
+		if err := json.Unmarshal(data, &bare); err != nil {
+			return nil, fmt.Errorf("decode %s result: %w", t, err)
+		}
+		_, v, err := decodeSample(bare.Result)
+		if err != nil {
+			return nil, err
+		}
+		return finite(v), nil
+	}
+
 	var res apiResult
 	if err := json.Unmarshal(data, &res); err != nil {
 		return nil, fmt.Errorf("decode query result: %w", err)
@@ -82,7 +119,16 @@ func (u *upstream) queryInstant(ctx context.Context, query string) (*float64, er
 	if err != nil {
 		return nil, err
 	}
-	return &v, nil
+	return finite(v), nil
+}
+
+// finite maps NaN and ±Inf to "no value": they are ordinary PromQL outcomes
+// (histogram_quantile over no samples, division by zero) that JSON can't carry.
+func finite(v float64) *float64 {
+	if math.IsNaN(v) || math.IsInf(v, 0) {
+		return nil
+	}
+	return &v
 }
 
 func (u *upstream) do(ctx context.Context, path string, query url.Values) (json.RawMessage, error) {

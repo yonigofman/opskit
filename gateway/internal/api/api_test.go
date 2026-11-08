@@ -6,6 +6,7 @@ import (
 	"errors"
 	"io"
 	"log/slog"
+	"math"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -86,5 +87,22 @@ func TestRejectsNonJSON(t *testing.T) {
 	res, _ := post(t, srv.URL+"/v1/tools/echo", `not json`)
 	if res.StatusCode != http.StatusBadRequest {
 		t.Fatalf("got %d", res.StatusCode)
+	}
+}
+
+// A result that can't be marshalled (NaN reached the encoder once) must not
+// leave the client a 200 with an unparseable body.
+func TestUnencodableResultBecomesAnError(t *testing.T) {
+	srv := newServer(Registry{"nan": func(context.Context, json.RawMessage) (any, error) {
+		return map[string]any{"value": math.NaN()}, nil
+	}})
+	defer srv.Close()
+
+	res, out := post(t, srv.URL+"/v1/tools/nan", `{}`)
+	if res.StatusCode == http.StatusOK {
+		t.Fatalf("got 200 for a result that cannot be encoded")
+	}
+	if out["code"] != "unavailable" {
+		t.Errorf("got %v, want an unavailable error", out)
 	}
 }

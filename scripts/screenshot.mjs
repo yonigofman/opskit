@@ -48,15 +48,23 @@ try {
   await page.waitForTimeout(6000);
   await page.screenshot({ path: join(outDir, "gallery-dark.png"), fullPage: true });
 
+  // Probe: the form before a run, so this needs no Gateway.
+  await page.getByRole("button", { name: "probe" }).click();
+  await page.waitForTimeout(600);
+  await page.screenshot({ path: join(outDir, "probe-dark.png"), fullPage: true });
+
   await page.getByRole("button", { name: /switch to light theme/i }).click();
   await page.waitForTimeout(800);
+  await page.screenshot({ path: join(outDir, "probe-light.png"), fullPage: true });
+  await page.getByRole("button", { name: "gallery" }).click();
+  await page.waitForTimeout(600);
   await page.screenshot({ path: join(outDir, "gallery-light.png"), fullPage: true });
   await page.getByRole("button", { name: "chat" }).click();
   await page.waitForTimeout(400);
   await page.screenshot({ path: join(outDir, "chat-light.png"), fullPage: true });
   await browser.close();
 
-  console.log(`Wrote chat-dark, chat-light, gallery-dark and gallery-light .png to ${outDir}`);
+  console.log(`Wrote chat, gallery and probe .png (dark + light) to ${outDir}`);
   if (problems.length > 0) {
     console.error(problems.join("\n"));
     exitCode = 1;

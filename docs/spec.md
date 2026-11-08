@@ -44,6 +44,12 @@ The Gateway is Go (client-go informers, one small binary). It can run standalone
 - Kubernetes calls use impersonation (`Impersonate-User` / `Impersonate-Group`). The Gateway's ServiceAccount has only `impersonate`, so the cluster's RBAC decides.
 - Prometheus/Mimir and Loki have no per-namespace RBAC. The Gateway uses `SelfSubjectAccessReview` to find the namespaces the user can read and injects a `namespace=~"…"` matcher into every PromQL/LogQL query, by parsing the AST (prom-label-proxy style), never with regex. In multi-tenant Mimir, `X-Scope-OrgID` comes from the same mapping.
 
+Each tool is declared once (name, typed args, handler, `readOnly`) so the HTTP Tools API and the later MCP
+endpoint serve the same definition and only `readOnly` tools can ever reach MCP.
+
+The browser calls the Gateway directly, so it answers CORS preflight for the origins in `OPSKIT_CORS_ORIGINS`
+(exact match, empty by default) and for no others.
+
 **Tools API**: `POST /v1/tools/{tool}` with a JSON body. The same tools are exposed as an MCP endpoint (read tools only).
 
 | Tool | Args | Returns |
@@ -66,7 +72,18 @@ Error contract (what `@opskit/core` maps to states):
 | 401 / 403 | `{"code":"forbidden","message","identity"}` | forbidden |
 | 5xx / network | `{"code":"unavailable","message"}` | stale if data was shown, else error |
 
-Never put upstream error internals in `message`.
+Never put upstream error internals in `message`. Prometheus answers `bad_data` (a query its engine rejects,
+e.g. over `max-samples`) map to `invalid_query`, not `unavailable`. `NaN` and `±Inf` are ordinary PromQL
+outcomes with no JSON form: an instant query returns `value: null` and a range query drops the sample, so the
+component reads empty or shows a gap rather than a response the client can't parse.
+
+Local stack for development: `docker compose up` runs Prometheus plus the Gateway, configured by
+`OPSKIT_PROM_URL`, `OPSKIT_ACCESS_FILE` (a static user/group → namespaces YAML standing in for
+`SelfSubjectAccessReview`), `OPSKIT_CORS_ORIGINS` and `OPSKIT_DEV_INSECURE_AUTH=1`. The last one makes the
+Gateway trust `X-OpsKit-Dev-User`/`-Groups` headers instead of a token; without it the Gateway refuses to
+start, so it can never be reached by omission. `gateway/deploy/smoke.sh` checks scoping, escape attempts,
+forbidden, caching and `prom_range` against it, and the playground's probe page runs arbitrary PromQL
+through it as any identity.
 
 **Action engine**
 

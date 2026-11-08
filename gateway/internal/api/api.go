@@ -69,8 +69,16 @@ func NewRouter(tools Registry, logger *slog.Logger) http.Handler {
 			return
 		}
 
+		// Encode into memory first: a half-written body would reach the client
+		// as a 200 it cannot parse, with the status already sent.
+		encoded, err := json.Marshal(result)
+		if err != nil {
+			logger.Error("tool result could not be encoded", "tool", name, "err", err)
+			writeError(w, &Error{Status: http.StatusInternalServerError, Code: "unavailable", Message: "the result could not be encoded"})
+			return
+		}
 		w.Header().Set("Content-Type", "application/json")
-		_ = json.NewEncoder(w).Encode(result)
+		_, _ = w.Write(encoded)
 	})
 
 	return mux
