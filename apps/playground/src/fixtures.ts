@@ -1,6 +1,9 @@
 import {
   GatewayError,
   mockTransport,
+  type K8sListArgs,
+  type K8sListResult,
+  type PodSummary,
   type PromInstantArgs,
   type PromInstantResult,
   type PromRangeArgs,
@@ -132,7 +135,75 @@ function promInstant(raw: Record<string, unknown>): PromInstantResult | Promise<
   return { value, provenance: instantProvenance(q, 30 + Math.round(noise(now, 4) * 60)) };
 }
 
-export const transport = mockTransport({ prom_range: promRange, prom_instant: promInstant }, { latencyMs: 450 });
+function pod(name: string, over: Partial<PodSummary> = {}): PodSummary {
+  return {
+    name,
+    namespace: "shop",
+    status: "Running",
+    ready: 1,
+    containers: 1,
+    restarts: 0,
+    node: "ip-10-0-1-14",
+    startedAt: Date.now() - 3 * 3600 * 1000,
+    ...over,
+  };
+}
+
+const CHECKOUT_PODS: PodSummary[] = [
+  pod("checkout-6b9f4-q2xlm"),
+  pod("checkout-6b9f4-7hd2k"),
+  pod("checkout-6b9f4-m9c4p", { status: "CrashLoopBackOff", ready: 0, restarts: 7, startedAt: Date.now() - 28 * 60 * 1000 }),
+  pod("checkout-6b9f4-x8f2r", { status: "OOMKilled", ready: 0, restarts: 2, startedAt: Date.now() - 12 * 60 * 1000 }),
+  pod("checkout-6b9f4-b3n6v", { status: "Pending", ready: 0, containers: 1, startedAt: 0, node: "" }),
+  pod("checkout-6b9f4-k1s7d"),
+];
+
+let flakyPodCalls = 0;
+
+function k8sList(raw: Record<string, unknown>): K8sListResult | Promise<K8sListResult> {
+  const args = raw as unknown as K8sListArgs;
+  const selector = args.labelSelector ?? "";
+
+  if (args.namespace === "payments") {
+    throw new GatewayError("forbidden", "No list on pods in this namespace.", { identity: IDENTITY });
+  }
+  if (selector.includes("orders-worker")) {
+    return { pods: [], provenance: k8sProvenance(args, 18) };
+  }
+  if (selector.includes("slow_backend")) {
+    return new Promise<never>(() => {}); // never answers: shows the loading state
+  }
+  if (selector.includes("(")) {
+    throw new GatewayError("invalid_query", "label selector is not valid");
+  }
+  if (selector.includes("flaky")) {
+    flakyPodCalls++;
+    if (flakyPodCalls > 1) throw new GatewayError("unavailable", "could not reach the cluster");
+  }
+
+  const pods = selector.includes("app=cart")
+    ? [pod("cart-7c5dd-nrlk7"), pod("cart-7c5dd-rdhks")]
+    : CHECKOUT_PODS;
+  return { pods, provenance: k8sProvenance(args, 30) };
+}
+
+function k8sProvenance(args: K8sListArgs, durationMs: number): K8sListResult["provenance"] {
+  const selector = args.labelSelector ? ` selector=${args.labelSelector}` : "";
+  return {
+    source: "kubernetes",
+    system: "Kubernetes · prod-eu",
+    query: `kind=${args.kind} namespace=${args.namespace}${selector}`,
+    identity: IDENTITY,
+    fetchedAt: Date.now(),
+    cache: durationMs < 40 ? "hit" : "miss",
+    durationMs,
+  };
+}
+
+export const transport = mockTransport(
+  { prom_range: promRange, prom_instant: promInstant, k8s_list: k8sList },
+  { latencyMs: 450 },
+);
 
 /** One PromChart per state, for the states gallery. */
 export const stateExamples = [
@@ -142,6 +213,16 @@ export const stateExamples = [
   { state: "Error", title: "Error rate · checkout", query: 'sum(rate(http_requests_total{code=~"5.."}[5m])))' },
   { state: "Forbidden", title: "p95 latency · payments", query: 'histogram_quantile(0.95, sum by (le) (rate(http_request_duration_seconds_bucket{namespace="payments"}[5m])))', unit: "s" },
   { state: "Stale", title: "Requests · cart", query: 'sum(rate(http_requests_total{namespace="shop", app="cart", flaky="1"}[5m]))', unit: "req/s", refreshSeconds: 4 },
+] as const;
+
+/** One PodTable per state, for the states gallery. */
+export const podTableExamples = [
+  { state: "Live", namespace: "shop", selector: "app=checkout" },
+  { state: "Loading", namespace: "shop", selector: "app=slow_backend" },
+  { state: "Empty", namespace: "shop", selector: "job=orders-worker" },
+  { state: "Error", namespace: "shop", selector: "app in (" },
+  { state: "Forbidden", namespace: "payments", selector: "app=ledger" },
+  { state: "Stale", namespace: "shop", selector: "app=cart,flaky=1", refreshSeconds: 4 },
 ] as const;
 
 /** One StatTile per state, for the states gallery. */

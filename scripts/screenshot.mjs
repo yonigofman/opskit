@@ -43,22 +43,24 @@ try {
   await page.waitForTimeout(9000);
   await page.screenshot({ path: join(outDir, "chat-dark.png"), fullPage: true });
 
-  // Gallery: every component in every state; stale needs one failed refresh.
-  await page.getByRole("button", { name: "gallery" }).click();
-  await page.waitForTimeout(6000);
-  await page.screenshot({ path: join(outDir, "gallery-dark.png"), fullPage: true });
-
   // Probe: the form before a run, so this needs no Gateway.
   await page.getByRole("button", { name: "probe" }).click();
   await page.waitForTimeout(600);
   await page.screenshot({ path: join(outDir, "probe-dark.png"), fullPage: true });
 
+  // Gallery: every component in every state; stale needs one failed refresh.
+  // It stays mounted across the theme switch below, because remounting would
+  // re-run the fixtures whose flaky handlers have already failed once.
+  await page.getByRole("button", { name: "gallery" }).click();
+  await page.waitForTimeout(6000);
+  await page.screenshot({ path: join(outDir, "gallery-dark.png"), fullPage: true });
+
   await page.getByRole("button", { name: /switch to light theme/i }).click();
   await page.waitForTimeout(800);
-  await page.screenshot({ path: join(outDir, "probe-light.png"), fullPage: true });
-  await page.getByRole("button", { name: "gallery" }).click();
-  await page.waitForTimeout(600);
   await page.screenshot({ path: join(outDir, "gallery-light.png"), fullPage: true });
+  await page.getByRole("button", { name: "probe" }).click();
+  await page.waitForTimeout(400);
+  await page.screenshot({ path: join(outDir, "probe-light.png"), fullPage: true });
   await page.getByRole("button", { name: "chat" }).click();
   await page.waitForTimeout(400);
   await page.screenshot({ path: join(outDir, "chat-light.png"), fullPage: true });

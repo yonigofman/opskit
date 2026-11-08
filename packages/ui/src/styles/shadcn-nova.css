@@ -91,6 +91,38 @@
   }
 
   /* MARK: Card */
+  .cn-table {
+    @apply text-sm;
+  }
+
+  .cn-table-header {
+    @apply [&_tr]:border-b;
+  }
+
+  .cn-table-body {
+    @apply [&_tr:last-child]:border-0;
+  }
+
+  .cn-table-footer {
+    @apply bg-muted/40 border-t font-medium;
+  }
+
+  .cn-table-row {
+    @apply hover:bg-muted/40 border-b transition-colors;
+  }
+
+  .cn-table-head {
+    @apply text-muted-foreground h-8 px-2 text-xs font-medium whitespace-nowrap;
+  }
+
+  .cn-table-cell {
+    @apply h-9 px-2 whitespace-nowrap;
+  }
+
+  .cn-table-caption {
+    @apply text-muted-foreground mt-3 text-xs;
+  }
+
   .cn-card {
     @apply ring-foreground/10 bg-card text-card-foreground gap-(--card-spacing) overflow-hidden rounded-xl py-(--card-spacing) text-sm ring-1 [--card-spacing:--spacing(4)] has-data-[slot=card-footer]:pb-0 has-[>img:first-child]:pt-0 data-[size=sm]:[--card-spacing:--spacing(3)] data-[size=sm]:has-data-[slot=card-footer]:pb-0 *:[img:first-child]:rounded-t-xl *:[img:last-child]:rounded-b-xl;
   }

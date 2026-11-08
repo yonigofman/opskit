@@ -33,6 +33,23 @@ type Error struct {
 
 func (e *Error) Error() string { return e.Message }
 
+// Provenance mirrors Provenance in packages/core/src/types.ts: the proof
+// shown under every panel. Every tool result carries one.
+type Provenance struct {
+	Source string `json:"source"` // prometheus | loki | kubernetes
+	System string `json:"system,omitempty"`
+	// Query as it actually ran, after any rewriting.
+	Query    string `json:"query"`
+	Identity string `json:"identity,omitempty"`
+	// Matchers the Gateway injected to enforce RBAC, where it injects any.
+	Injected   string `json:"injected,omitempty"`
+	FetchedAt  int64  `json:"fetchedAt"`
+	Cache      string `json:"cache,omitempty"`
+	DurationMs int64  `json:"durationMs,omitempty"`
+	// Range queries only: resolution in seconds.
+	Step int64 `json:"step,omitempty"`
+}
+
 const maxBody = 1 << 20
 
 // NewRouter returns the Gateway's HTTP handler.

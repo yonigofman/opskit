@@ -1,0 +1,140 @@
+# Namespaces, workloads and RBAC for the local kind cluster, so k8s_list has
+# something to list and impersonation has something to allow and deny.
+#
+# yoni can read pods in shop only; dana can read pods in payments only. The
+# Gateway itself only needs `impersonate`, which the kind admin kubeconfig has.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: shop
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: payments
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: checkout
+  namespace: shop
+spec:
+  replicas: 3
+  selector:
+    matchLabels: { app: checkout }
+  template:
+    metadata:
+      labels: { app: checkout }
+    spec:
+      containers:
+        - name: app
+          image: registry.k8s.io/pause:3.9
+          resources:
+            requests: { cpu: 10m, memory: 16Mi }
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cart
+  namespace: shop
+spec:
+  replicas: 2
+  selector:
+    matchLabels: { app: cart }
+  template:
+    metadata:
+      labels: { app: cart }
+    spec:
+      containers:
+        - name: app
+          image: registry.k8s.io/pause:3.9
+          resources:
+            requests: { cpu: 10m, memory: 16Mi }
+---
+# A pod that keeps crashing, so the table has a real CrashLoopBackOff to show.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: checkout-worker
+  namespace: shop
+spec:
+  replicas: 1
+  selector:
+    matchLabels: { app: checkout, role: worker }
+  template:
+    metadata:
+      labels: { app: checkout, role: worker }
+    spec:
+      containers:
+        - name: worker
+          image: busybox:1.36
+          command: ["sh", "-c", "echo starting; sleep 2; exit 1"]
+          resources:
+            requests: { cpu: 10m, memory: 16Mi }
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ledger
+  namespace: payments
+spec:
+  replicas: 1
+  selector:
+    matchLabels: { app: ledger }
+  template:
+    metadata:
+      labels: { app: ledger }
+    spec:
+      containers:
+        - name: app
+          image: registry.k8s.io/pause:3.9
+          resources:
+            requests: { cpu: 10m, memory: 16Mi }
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: pod-reader
+  namespace: shop
+rules:
+  - apiGroups: [""]
+    resources: ["pods"]
+    verbs: ["get", "list", "watch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: yoni-reads-shop
+  namespace: shop
+subjects:
+  - kind: User
+    name: yoni
+    apiGroup: rbac.authorization.k8s.io
+roleRef:
+  kind: Role
+  name: pod-reader
+  apiGroup: rbac.authorization.k8s.io
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: pod-reader
+  namespace: payments
+rules:
+  - apiGroups: [""]
+    resources: ["pods"]
+    verbs: ["get", "list", "watch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: dana-reads-payments
+  namespace: payments
+subjects:
+  - kind: User
+    name: dana
+    apiGroup: rbac.authorization.k8s.io
+roleRef:
+  kind: Role
+  name: pod-reader
+  apiGroup: rbac.authorization.k8s.io

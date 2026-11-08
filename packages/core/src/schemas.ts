@@ -26,3 +26,17 @@ export const statTileProps = z.object({
 });
 
 export type StatTileProps = z.infer<typeof statTileProps>;
+
+export const podTableProps = z.object({
+  namespace: z.string().describe("Kubernetes namespace to list pods in, e.g. \"shop\"."),
+  selector: z
+    .string()
+    .optional()
+    .describe("Label selector narrowing the pods, e.g. \"app=checkout\". Omit for every pod in the namespace."),
+  columns: z
+    .array(z.enum(["status", "ready", "restarts", "node", "age"]))
+    .optional()
+    .describe("Columns beside the name, in order. Defaults to status, ready, restarts, age."),
+});
+
+export type PodTableProps = z.infer<typeof podTableProps>;

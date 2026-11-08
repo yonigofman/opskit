@@ -49,6 +49,33 @@ export interface PromInstantResult {
   provenance: Provenance;
 }
 
+/** One pod, reduced to what a table shows. The Gateway never sends whole objects. */
+export interface PodSummary {
+  name: string;
+  namespace: string;
+  /** As Kubernetes words it: Running, Pending, CrashLoopBackOff, OOMKilled, Terminating. */
+  status: string;
+  /** Ready containers out of `containers`. */
+  ready: number;
+  containers: number;
+  restarts: number;
+  node: string;
+  /** Unix milliseconds the pod started; 0 when it hasn't. */
+  startedAt: number;
+}
+
+export interface K8sListArgs {
+  /** Only "Pod" today. */
+  kind: string;
+  namespace: string;
+  labelSelector?: string;
+}
+
+export interface K8sListResult {
+  pods: PodSummary[];
+  provenance: Provenance;
+}
+
 /**
  * Every OpsKit component is in exactly one of these states.
  * - loading: first fetch in flight

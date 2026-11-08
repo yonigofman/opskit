@@ -32,13 +32,24 @@ services:
       OPSKIT_PROM_SYSTEM: "Prometheus · docker compose"
       # The playground's known local ports (vite dev, vite preview, screenshot.mjs).
       OPSKIT_CORS_ORIGINS: "http://localhost:5173,http://localhost:4173,http://localhost:4174,http://localhost:4175"
+      # Present only after ./gateway/deploy/kind-up.sh; without it the Gateway
+      # simply doesn't serve the Kubernetes tools.
+      OPSKIT_KUBECONFIG: "/etc/opskit/kubeconfig.yaml"
+      OPSKIT_KUBE_SYSTEM: "Kubernetes · kind-opskit"
     volumes:
       - ./gateway/deploy/access.yaml:/etc/opskit/access.yaml:ro
+      - ./gateway/deploy/kind-kubeconfig.yaml:/etc/opskit/kubeconfig.yaml:ro
     ports:
       - "8080:8080"
+    networks: [default, kind]
     depends_on:
       prometheus:
         condition: service_healthy
+
+networks:
+  # Created by kind; lets the Gateway reach the cluster's API server.
+  kind:
+    external: true
 
 volumes:
   prometheus-data:

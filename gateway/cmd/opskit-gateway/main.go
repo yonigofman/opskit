@@ -19,8 +19,12 @@ import (
 	"github.com/yonigofman/opskit/gateway/internal/access"
 	"github.com/yonigofman/opskit/gateway/internal/api"
 	"github.com/yonigofman/opskit/gateway/internal/cache"
+	"github.com/yonigofman/opskit/gateway/internal/kube"
 	"github.com/yonigofman/opskit/gateway/internal/prom"
 	"github.com/yonigofman/opskit/gateway/internal/tool"
+
+	"k8s.io/client-go/rest"
+	"k8s.io/client-go/tools/clientcmd"
 )
 
 type identityKey struct{}
@@ -47,6 +51,20 @@ func identityFromContext(ctx context.Context) (access.Identity, error) {
 		return access.Identity{}, errors.New("no identity on this request")
 	}
 	return id, nil
+}
+
+// kubeConfig prefers the in-cluster ServiceAccount, then OPSKIT_KUBECONFIG or
+// the usual kubeconfig search path. Whatever it finds must be able to
+// impersonate; it is never used to read as itself.
+func kubeConfig() (*rest.Config, error) {
+	if cfg, err := rest.InClusterConfig(); err == nil {
+		return cfg, nil
+	}
+	rules := clientcmd.NewDefaultClientConfigLoadingRules()
+	if path := os.Getenv("OPSKIT_KUBECONFIG"); path != "" {
+		rules.ExplicitPath = path
+	}
+	return clientcmd.NewNonInteractiveDeferredLoadingClientConfig(rules, &clientcmd.ConfigOverrides{}).ClientConfig()
 }
 
 func main() {
@@ -88,7 +106,21 @@ func main() {
 	promAdapter := prom.New(promURL, resolver, cache.New(5*time.Second), nil, promSystem)
 	promAdapter.Logger = logger
 
-	registry := tool.NewRegistry(promAdapter.Specs()...)
+	specs := promAdapter.Specs()
+
+	// Kubernetes is optional: without a cluster the Tools API simply doesn't
+	// serve k8s_list, and the client gets "tool not available on this Gateway"
+	// rather than a Gateway that won't start.
+	if cfg, err := kubeConfig(); err != nil {
+		logger.Warn("no Kubernetes config; k8s tools are not served", "err", err)
+	} else {
+		kubeAdapter := kube.New(cfg, cache.New(5*time.Second), os.Getenv("OPSKIT_KUBE_SYSTEM"))
+		kubeAdapter.Logger = logger
+		specs = append(specs, kubeAdapter.Specs()...)
+		logger.Info("serving Kubernetes tools", "host", cfg.Host)
+	}
+
+	registry := tool.NewRegistry(specs...)
 
 	var corsOrigins []string
 	if v := os.Getenv("OPSKIT_CORS_ORIGINS"); v != "" {

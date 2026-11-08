@@ -34,7 +34,7 @@ Request flow:
 4. The Gateway authenticates, injects the namespace matcher, serves from cache or upstream, and streams the result.
 5. Clicking ActionButton: `action_plan` → dry-run diff → approval → `action_execute` → audit event.
 
-The Gateway is Go (client-go informers, one small binary). It can run standalone or as a sidecar next to the host app.
+The Gateway is Go (client-go, one small binary). It can run standalone or as a sidecar next to the host app.
 
 ## Gateway
 
@@ -42,6 +42,7 @@ The Gateway is Go (client-go informers, one small binary). It can run standalone
 
 - The host app passes the user's OIDC token; the Gateway validates it against the cluster's issuer.
 - Kubernetes calls use impersonation (`Impersonate-User` / `Impersonate-Group`). The Gateway's ServiceAccount has only `impersonate`, so the cluster's RBAC decides.
+- That rules out a shared informer: one cache filled with the Gateway's own credentials would be read as the Gateway, not as the viewer. `k8s_list` lists as the viewer instead, behind a short-TTL cache keyed by the identity, and components poll. A watch, if it lands, has to be per-identity.
 - Prometheus/Mimir and Loki have no per-namespace RBAC. The Gateway uses `SelfSubjectAccessReview` to find the namespaces the user can read and injects a `namespace=~"…"` matcher into every PromQL/LogQL query, by parsing the AST (prom-label-proxy style), never with regex. In multi-tenant Mimir, `X-Scope-OrgID` comes from the same mapping.
 
 Each tool is declared once (name, typed args, handler, `readOnly`) so the HTTP Tools API and the later MCP
@@ -54,7 +55,7 @@ The browser calls the Gateway directly, so it answers CORS preflight for the ori
 
 | Tool | Args | Returns |
 | --- | --- | --- |
-| `k8s_list` | kind, namespace, labelSelector | resources from the informer cache |
+| `k8s_list` | kind, namespace, labelSelector | pods, listed as the viewer (v1 serves `Pod`) |
 | `k8s_get` | kind, namespace, name | full resource + status |
 | `k8s_events` | namespace, involvedObject? | events by time |
 | `prom_range` | query, start, end, step | `{series, provenance}` |
@@ -109,7 +110,7 @@ v1 answers "what's wrong right now". Each component takes refs and fetches its o
 | --- | --- | --- | --- |
 | `StatTile` | label, query, unit?, range?, warnAt?, dangerAt? | `prom_instant` + `prom_range` for the sparkline | **built** |
 | `PromChart` | title, query, range?, unit?, warnAt?, dangerAt? | `prom_range` | **built** |
-| `PodTable` | namespace, selector, columns? | `k8s_list` + watch | |
+| `PodTable` | namespace, selector, columns? | `k8s_list` (polled) | **built** |
 | `LogTail` | query, range?, follow? | `loki_range` + `loki_tail` | |
 | `EventTimeline` | namespace, object? | `k8s_events` + watch | |
 | `ActionButton` | label, action, target, params | `action_plan` → `action_execute` | |
@@ -175,14 +176,14 @@ Audit event: `timestamp, user, groups, action, target, params, plan_id, diff_has
 | LogTail sustained | 5,000 lines/s without dropped frames |
 | Gateway memory, 5,000-pod cluster | < 512 MiB |
 
-Techniques: fetch-on-parse; small model output; shared informer cache; query coalescing (client `dedupe` + Gateway); `step = range / width` (`computeStep`); short-TTL cache keyed by query + rounded range + permission scope; one multiplexed WebSocket per client; canvas charts (uPlot); virtualized tables and logs; per-frame batching; off-screen panels pause.
+Techniques: fetch-on-parse; small model output; query coalescing (client `dedupe` + Gateway); `step = range / width` (`computeStep`); short-TTL cache keyed by query + rounded range + permission scope; one multiplexed WebSocket per client; canvas charts (uPlot); virtualized tables and logs; per-frame batching; off-screen panels pause.
 
 Benchmark harness (M0): kind + kwok with 5,000 pods, Prometheus and Loki with synthetic data, recorded LLM streams replayed at real speed, Playwright for render timing and frame rate, k6 for the Gateway; results as JSON and a PR comment.
 
 ## Milestones
 
 1. **M0 Harness:** kind + kwok, synthetic Prometheus/Loki, recorded streams. Done: `make bench` emits metrics JSON.
-2. **M1 Gateway read path:** OIDC, impersonation, informer cache, Prometheus/Loki adapters, namespace injection. Done: `k8s_list` and `prom_range` within budget; an unauthorized user gets forbidden.
+2. **M1 Gateway read path:** OIDC, impersonation, Prometheus/Loki adapters, namespace injection. Done: `k8s_list` and `prom_range` within budget; an unauthorized user gets forbidden.
 3. **M2 Core + three components:** provider, hooks, PromChart (done), PodTable, LogTail. Done: playground shows all three live at 60fps.
 4. **M3 Actions:** action engine, policy file, audit, ResourceDiff, ActionButton, EventTimeline. Done: full rollback with dry-run diff, approval and audit event; a stale plan is rejected.
 5. **M4 Agent pack:** MCP server, system prompt, 50 evals. Done: ≥ 95% valid output on at least one model, zero invented values.

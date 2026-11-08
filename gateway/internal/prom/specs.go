@@ -26,19 +26,6 @@ type PromSeries struct {
 	Values [][2]float64      `json:"values"`
 }
 
-// Provenance mirrors Provenance in packages/core/src/types.ts.
-type Provenance struct {
-	Source     string `json:"source"`
-	System     string `json:"system,omitempty"`
-	Query      string `json:"query"`
-	Identity   string `json:"identity,omitempty"`
-	Injected   string `json:"injected,omitempty"`
-	FetchedAt  int64  `json:"fetchedAt"`
-	Cache      string `json:"cache,omitempty"`
-	DurationMs int64  `json:"durationMs,omitempty"`
-	Step       int64  `json:"step,omitempty"`
-}
-
 // PromRangeArgs mirrors PromRangeArgs in packages/core/src/types.ts.
 type PromRangeArgs struct {
 	Query string `json:"query"`
@@ -49,8 +36,8 @@ type PromRangeArgs struct {
 
 // PromRangeResult mirrors PromRangeResult in packages/core/src/types.ts.
 type PromRangeResult struct {
-	Series     []PromSeries `json:"series"`
-	Provenance Provenance   `json:"provenance"`
+	Series     []PromSeries   `json:"series"`
+	Provenance api.Provenance `json:"provenance"`
 }
 
 // PromInstantArgs mirrors PromInstantArgs in packages/core/src/types.ts.
@@ -60,8 +47,8 @@ type PromInstantArgs struct {
 
 // PromInstantResult mirrors PromInstantResult in packages/core/src/types.ts.
 type PromInstantResult struct {
-	Value      *float64   `json:"value"`
-	Provenance Provenance `json:"provenance"`
+	Value      *float64       `json:"value"`
+	Provenance api.Provenance `json:"provenance"`
 }
 
 // Adapter is the Prometheus/Mimir adapter: it scopes every query to the
@@ -111,7 +98,7 @@ func (a *Adapter) scope(ctx context.Context, id access.Identity) ([]string, *api
 		return nil, &api.Error{Status: http.StatusServiceUnavailable, Code: "unavailable", Message: "could not resolve permissions"}
 	}
 	if len(ns) == 0 {
-		return nil, &api.Error{Status: http.StatusForbidden, Code: "forbidden", Message: "no namespaces in scope", Identity: id.User}
+		return nil, &api.Error{Status: http.StatusForbidden, Code: "forbidden", Message: "No namespaces in scope.", Identity: id.User}
 	}
 	return ns, nil
 }
@@ -186,7 +173,7 @@ func (a *Adapter) rangeHandler(ctx context.Context, id access.Identity, args Pro
 
 	result := PromRangeResult{
 		Series: series,
-		Provenance: Provenance{
+		Provenance: api.Provenance{
 			Source:     "prometheus",
 			System:     a.System,
 			Query:      rewritten,
@@ -238,7 +225,7 @@ func (a *Adapter) instantHandler(ctx context.Context, id access.Identity, args P
 
 	result := PromInstantResult{
 		Value: value,
-		Provenance: Provenance{
+		Provenance: api.Provenance{
 			Source:     "prometheus",
 			System:     a.System,
 			Query:      rewritten,

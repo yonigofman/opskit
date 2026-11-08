@@ -15,6 +15,7 @@ apps/playground/    Vite + Tailwind v4 demo: an AI Elements-style agent chat (sr
                     component state (src/Gallery.tsx, src/fixtures.ts) and a PromQL probe against a real
                     Gateway (src/Probe.tsx). Chat and gallery run on the mock; probe is always live.
 docker-compose.yml  Local stack to exercise the Gateway for real: Prometheus + the Gateway. Dev auth only.
+                    gateway/deploy/kind-up.sh adds a kind cluster for the Kubernetes tools.
 docs/spec.md        v1 spec: catalog, Tools API, states, security, budgets, milestones
 ```
 
@@ -29,10 +30,15 @@ pnpm dev                    # playground at http://localhost:5173
 cd gateway && go vet ./... && go test ./... && gofmt -l .
 node scripts/screenshot.mjs # serves apps/playground/dist; chat, gallery and probe, dark + light, into .screenshots/
 
+./gateway/deploy/kind-up.sh     # kind cluster "opskit": namespaces shop/payments, pods, and RBAC for yoni and dana
 docker compose up --build -d    # Prometheus (self-scraped as namespaces shop/payments/kube-system) + Gateway on :8080
 ./gateway/deploy/smoke.sh       # end-to-end checks: scoping, escape attempts, forbidden, cache, prom_range
-docker compose down
+docker compose down             # kind delete cluster --name opskit to drop the cluster too
 ```
+
+`k8s_list` needs the kind cluster: run `kind-up.sh` **before** `docker compose up`, because the Gateway only
+serves the Kubernetes tools when it finds a kubeconfig, and the compose file mounts the one that script
+writes. Without it the tool is simply absent and the Tools API answers 501.
 
 With that stack up, the playground's **probe** page (`pnpm dev`, then the Probe tab) runs arbitrary PromQL
 through the real Gateway as any identity. The chat's header badge toggles from mock to live; the
@@ -79,12 +85,14 @@ After changing `packages/core`, rebuild it (`pnpm --filter @opskit/core build`) 
 | ui: `PromChart`, `StatTile`, panel, states, provenance, OpenUI library (shadcn-native) | done |
 | playground: AI Elements-style chat with scripted agent turns + states gallery | done |
 | playground: PromQL probe page against a live Gateway, with a per-identity transport | done |
+| ui: `PodTable` (shadcn table, Kubernetes status words, six states) | done |
 | registry: `shadcn build` output in `packages/ui/public/r` (the URLs in registry.json) | not yet |
 | gateway: Tools API skeleton + error contract | done |
 | gateway: Prometheus/Mimir adapter, AST namespace injection, scope-keyed cache, CORS, static YAML access map | done (M1) |
 | gateway: auth (OIDC + impersonation), `SelfSubjectAccessReview` in place of the static map | next (M1) |
-| gateway: `k8s_list` + informer cache, Loki adapter | M1/M2 |
-| PodTable, LogTail, EventTimeline, ActionButton | designed, not built |
+| gateway: `k8s_list` as the viewer (impersonation + per-identity cache, no informer) | done |
+| gateway: Loki adapter, `k8s_get`, `k8s_events`, watch/streaming for PodTable | M2 |
+| LogTail, EventTimeline, ActionButton | designed, not built |
 | MCP server + agent evals | M4 |
 
 Designs for every v1 component and state are on the "OpsKit v1 Components" Claude Design canvas; ask Yoni for the link if you need to compare.

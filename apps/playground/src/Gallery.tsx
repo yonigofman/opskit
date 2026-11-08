@@ -1,6 +1,6 @@
-import { PromChart, StatTile } from "@opskit/ui";
+import { PodTable, PromChart, StatTile } from "@opskit/ui";
 import type { ReactNode } from "react";
-import { stateExamples, statTileExamples } from "./fixtures";
+import { podTableExamples, stateExamples, statTileExamples } from "./fixtures";
 
 /** Every component in every state, against the mock Gateway. Used for review and screenshots. */
 export function Gallery() {
@@ -35,11 +35,37 @@ export function Gallery() {
           </Cell>
         ))}
       </Section>
+      <Section
+        wide
+        title="PodTable, every state"
+        description="Pods the Gateway listed as the viewer. Kubernetes' own words for status, never a prettier synonym."
+      >
+        {podTableExamples.map((ex) => (
+          <Cell key={ex.state} label={ex.state}>
+            <PodTable
+              namespace={ex.namespace}
+              selector={ex.selector}
+              refreshSeconds={"refreshSeconds" in ex ? ex.refreshSeconds : 0}
+            />
+          </Cell>
+        ))}
+      </Section>
     </div>
   );
 }
 
-function Section({ title, description, children }: { title: string; description: string; children: ReactNode }) {
+function Section({
+  title,
+  description,
+  children,
+  wide,
+}: {
+  title: string;
+  description: string;
+  children: ReactNode;
+  /** Tables need more room than charts before their columns start to clip. */
+  wide?: boolean;
+}) {
   return (
     <section className="flex flex-col gap-5">
       <div className="flex flex-col gap-1.5">
@@ -47,7 +73,15 @@ function Section({ title, description, children }: { title: string; description:
         <h2 className="text-2xl font-semibold tracking-tight">{title}</h2>
         <p className="text-sm text-muted-foreground">{description}</p>
       </div>
-      <div className="grid grid-cols-[repeat(auto-fill,minmax(min(100%,22rem),1fr))] gap-5">{children}</div>
+      <div
+        className={
+          wide
+            ? "grid grid-cols-[repeat(auto-fill,minmax(min(100%,30rem),1fr))] gap-5"
+            : "grid grid-cols-[repeat(auto-fill,minmax(min(100%,22rem),1fr))] gap-5"
+        }
+      >
+        {children}
+      </div>
     </section>
   );
 }

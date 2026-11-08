@@ -1,5 +1,6 @@
 export { PromChart, type PromChartViewProps } from "./components/opskit/prom-chart"
 export { StatTile, type StatTileViewProps } from "./components/opskit/stat-tile"
+export { PodTable, type PodTableViewProps } from "./components/opskit/pod-table"
 export { OpsPanel, type OpsPanelProps } from "./components/opskit/panel"
 export { ProvenanceFooter, type ProvenanceFooterProps } from "./components/opskit/provenance"
 export { EmptyState, ForbiddenState, LoadingState, QueryErrorState } from "./components/opskit/states"

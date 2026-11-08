@@ -1,7 +1,8 @@
 import { createLibrary, defineComponent, type PromptOptions } from "@openuidev/react-lang";
-import { promChartProps, statTileProps } from "@opskit/core";
+import { podTableProps, promChartProps, statTileProps } from "@opskit/core";
 import { z } from "zod/v4";
 import { PromChart as PromChartView } from "./components/opskit/prom-chart";
+import { PodTable as PodTableView } from "./components/opskit/pod-table";
 import { StatTile as StatTileView } from "./components/opskit/stat-tile";
 
 const Heading = defineComponent({
@@ -32,34 +33,42 @@ const StatTile = defineComponent({
   component: ({ props }) => <StatTileView {...props} />,
 });
 
+const PodTable = defineComponent({
+  name: "PodTable",
+  description: "Live pods in a namespace, with status, readiness and restarts. Use when the question is which pods are unhealthy.",
+  props: podTableProps,
+  component: ({ props }) => <PodTableView {...props} />,
+});
+
 const Row = defineComponent({
   name: "Row",
   description: "Places charts side by side; wraps on narrow screens.",
-  props: z.object({ children: z.array(z.union([PromChart.ref, StatTile.ref, Text.ref])) }),
+  props: z.object({ children: z.array(z.union([PromChart.ref, StatTile.ref, PodTable.ref, Text.ref])) }),
   component: ({ props, renderNode }) => <div className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,20rem),1fr))] gap-4">{renderNode(props.children)}</div>,
 });
 
 const Stack = defineComponent({
   name: "Stack",
   description: "The root: components top to bottom, in the order a reader should see them.",
-  props: z.object({ children: z.array(z.union([Heading.ref, Text.ref, PromChart.ref, StatTile.ref, Row.ref])) }),
+  props: z.object({ children: z.array(z.union([Heading.ref, Text.ref, PromChart.ref, StatTile.ref, PodTable.ref, Row.ref])) }),
   component: ({ props, renderNode }) => <div className="flex min-w-0 flex-col gap-4">{renderNode(props.children)}</div>,
 });
 
 /** Every component an agent can render through OpsKit. Kept small on purpose: fewer choices, better output. */
 export const opskitLibrary = createLibrary({
   root: "Stack",
-  components: [Stack, Row, Heading, Text, PromChart, StatTile],
+  components: [Stack, Row, Heading, Text, PromChart, StatTile, PodTable],
   componentGroups: [
     { name: "Layout", components: ["Stack", "Row", "Heading", "Text"] },
     {
       name: "Live ops data",
-      components: ["PromChart", "StatTile"],
+      components: ["PromChart", "StatTile", "PodTable"],
       notes: [
         "- Components fetch their own data. Pass queries, never values you computed or remember.",
         "- Write data components before Text so they start loading while you write.",
         "- Use the namespace and labels you found while investigating; the viewer's access is enforced for you.",
         "- StatTile for one headline number, PromChart for how it moved over the range.",
+        "- PodTable when the answer is about which pods are unhealthy; pass the namespace and a label selector, never pod names.",
       ],
     },
   ],
