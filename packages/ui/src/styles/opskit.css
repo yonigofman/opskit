@@ -1,0 +1,296 @@
+/*
+ * OpsKit styles.
+ *
+ * Every color reads a shadcn/ui (v4) variable first, so components take on the host
+ * app's theme with no setup. Without shadcn, the --okf-* fallbacks give OpsKit its own
+ * look: graphite surfaces, one lime signal. Switch the fallbacks with
+ * data-opskit-theme="light" | "dark" on any ancestor (dark by default).
+ *
+ * The --ok-* mapping is redeclared wherever a theme can change, because a custom
+ * property's var() resolves where it is declared, not where it is used.
+ */
+
+:root,
+[data-opskit-theme="dark"] {
+  --okf-bg: #111113;
+  --okf-surface: #18181b;
+  --okf-overlay: #1e1e22;
+  --okf-line: #232327;
+  --okf-line-strong: #3a3a41;
+  --okf-ink: #ededee;
+  --okf-ink-muted: #a1a1aa;
+  --okf-ink-subtle: #84848e;
+  --okf-accent: #c6f24e;
+  --okf-accent-ink: #c6f24e;
+  --okf-danger: #ff7a6b;
+  --okf-warning: #f5b740;
+  --okf-success: #3dd68c;
+  --okf-chart-1: #7ba011;
+  --okf-chart-2: #3295ee;
+  --okf-chart-3: #d6629e;
+  --okf-chart-4: #cd7b00;
+  --okf-chart-5: #00a29c;
+  --okf-chart-6: #9979e7;
+}
+
+[data-opskit-theme="light"] {
+  --okf-bg: #ffffff;
+  --okf-surface: #fafaf9;
+  --okf-overlay: #ffffff;
+  --okf-line: #e4e4e0;
+  --okf-line-strong: #c9c9c4;
+  --okf-ink: #0e0e10;
+  --okf-ink-muted: #56565c;
+  --okf-ink-subtle: #6f6f76;
+  --okf-accent: #c6f24e;
+  --okf-accent-ink: #466300;
+  --okf-danger: #c4291c;
+  --okf-warning: #925600;
+  --okf-success: #0f7a4f;
+  --okf-chart-1: #618200;
+  --okf-chart-2: #1577c8;
+  --okf-chart-3: #b24981;
+  --okf-chart-4: #aa6000;
+  --okf-chart-5: #008e88;
+  --okf-chart-6: #7c5ec2;
+}
+
+:root,
+.dark,
+.light,
+[data-opskit-theme] {
+  --ok-bg: var(--background, var(--okf-bg));
+  --ok-surface: var(--card, var(--okf-surface));
+  --ok-overlay: var(--popover, var(--okf-overlay));
+  --ok-line: var(--border, var(--okf-line));
+  --ok-line-strong: var(--input, var(--okf-line-strong));
+  --ok-ink: var(--foreground, var(--okf-ink));
+  --ok-ink-muted: var(--muted-foreground, var(--okf-ink-muted));
+  --ok-ink-subtle: var(--okf-ink-subtle);
+  --ok-accent: var(--okf-accent);
+  --ok-accent-ink: var(--okf-accent-ink);
+  --ok-danger: var(--destructive, var(--okf-danger));
+  --ok-warning: var(--okf-warning);
+  --ok-success: var(--okf-success);
+  --ok-chart-1: var(--chart-1, var(--okf-chart-1));
+  --ok-chart-2: var(--chart-2, var(--okf-chart-2));
+  --ok-chart-3: var(--chart-3, var(--okf-chart-3));
+  --ok-chart-4: var(--chart-4, var(--okf-chart-4));
+  --ok-chart-5: var(--chart-5, var(--okf-chart-5));
+  --ok-chart-6: var(--okf-chart-6);
+  --ok-radius: var(--radius, 8px);
+  --ok-font-mono: ui-monospace, "JetBrains Mono", "SF Mono", Menlo, Consolas, monospace;
+}
+
+/* ---------- panel: every piece of agent output lives in one ---------- */
+
+.ok-panel {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+  padding: 16px;
+  border: 1px solid var(--ok-line);
+  border-radius: var(--ok-radius);
+  background: var(--ok-bg);
+  color: var(--ok-ink);
+  font-size: 13px;
+  line-height: 18px;
+}
+
+/* Corner ticks mark UI an agent generated. */
+.ok-panel__tick {
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  border-color: var(--ok-accent);
+  border-style: solid;
+  border-width: 0;
+  pointer-events: none;
+}
+.ok-panel__tick--tl { top: -1px; left: -1px; border-top-width: 2px; border-left-width: 2px; border-top-left-radius: 3px; }
+.ok-panel__tick--tr { top: -1px; right: -1px; border-top-width: 2px; border-right-width: 2px; border-top-right-radius: 3px; }
+.ok-panel__tick--bl { bottom: -1px; left: -1px; border-bottom-width: 2px; border-left-width: 2px; border-bottom-left-radius: 3px; }
+.ok-panel__tick--br { bottom: -1px; right: -1px; border-bottom-width: 2px; border-right-width: 2px; border-bottom-right-radius: 3px; }
+
+.ok-panel__head { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.ok-panel__kicker {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font: 600 11px/14px var(--ok-font-mono);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ok-ink-subtle);
+}
+.ok-panel__title { margin: 0; font-size: 16px; line-height: 22px; font-weight: 600; letter-spacing: -0.01em; }
+.ok-panel__body { min-width: 0; }
+.ok-panel[data-status="stale"] .ok-panel__body { opacity: 0.6; }
+
+/* ---------- small parts ---------- */
+
+.ok-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0 6px;
+  height: 18px;
+  border-radius: 3px;
+  font: 600 10px/12px var(--ok-font-mono);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.ok-badge--warning { color: var(--ok-warning); background: color-mix(in srgb, var(--ok-warning) 12%, transparent); }
+
+.ok-pip { width: 7px; height: 7px; border-radius: 9999px; flex: none; background: var(--ok-ink-subtle); }
+.ok-pip--live { background: var(--ok-success); animation: ok-pulse 1.6s ease-in-out infinite; }
+.ok-pip--warning { background: var(--ok-warning); animation: ok-pulse 1.6s ease-in-out infinite; }
+@keyframes ok-pulse { 50% { opacity: 0.35; } }
+
+.ok-code { font-family: var(--ok-font-mono); font-size: 0.92em; color: var(--ok-ink); }
+
+.ok-button {
+  display: inline-flex;
+  align-items: center;
+  height: 24px;
+  padding: 0 8px;
+  border: 1px solid var(--ok-line-strong);
+  border-radius: 5px;
+  background: transparent;
+  color: var(--ok-ink);
+  font: 500 12px/16px inherit;
+  font-family: inherit;
+  cursor: pointer;
+}
+.ok-button:hover { background: var(--ok-surface); }
+.ok-button:focus-visible,
+.ok-prov__summary:focus-visible { outline: 2px solid var(--ok-accent); outline-offset: 2px; }
+
+/* ---------- states ---------- */
+
+.ok-skel {
+  display: block;
+  border-radius: 4px;
+  background: linear-gradient(90deg, var(--ok-surface), color-mix(in srgb, var(--ok-ink) 6%, var(--ok-surface)), var(--ok-surface));
+  background-size: 200% 100%;
+  animation: ok-shimmer 1.4s linear infinite;
+}
+@keyframes ok-shimmer { to { background-position: -200% 0; } }
+
+.ok-state {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 8px;
+  padding: 16px;
+  border-radius: var(--ok-radius);
+}
+.ok-state__title { display: flex; align-items: center; gap: 6px; font-size: 14px; line-height: 20px; font-weight: 600; }
+.ok-state__text { margin: 0; font-size: 12px; line-height: 16px; color: var(--ok-ink-muted); }
+.ok-state--empty { border: 1px solid var(--ok-line); background: var(--ok-surface); }
+.ok-state--error { background: color-mix(in srgb, var(--ok-danger) 10%, transparent); }
+.ok-state--error .ok-state__title { color: var(--ok-danger); }
+.ok-state--forbidden { border: 1px dashed var(--ok-line-strong); }
+.ok-state__query { font: 400 11px/16px var(--ok-font-mono); color: var(--ok-ink-muted); word-break: break-all; }
+.ok-state__query mark { background: none; color: var(--ok-danger); text-decoration: underline; }
+
+/* ---------- provenance: the proof under every panel ---------- */
+
+.ok-prov {
+  position: relative;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--ok-line);
+  font-size: 11px;
+  line-height: 14px;
+  color: var(--ok-ink-subtle);
+}
+.ok-prov__summary {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 22px;
+  padding: 0 8px;
+  border: 1px solid var(--ok-line);
+  border-radius: 5px;
+  background: var(--ok-surface);
+  color: var(--ok-ink-muted);
+  font: 500 11px/14px var(--ok-font-mono);
+  cursor: pointer;
+  list-style: none;
+  white-space: nowrap;
+}
+.ok-prov__summary::-webkit-details-marker { display: none; }
+.ok-prov__query {
+  flex: 1 1 120px;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: var(--ok-font-mono);
+  color: var(--ok-ink-muted);
+}
+.ok-prov__meta { display: inline-flex; align-items: center; gap: 6px; font-family: var(--ok-font-mono); white-space: nowrap; }
+.ok-prov__meta--stale { color: var(--ok-warning); }
+.ok-prov__pop {
+  position: absolute;
+  z-index: 40;
+  left: 0;
+  bottom: calc(100% + 8px);
+  width: min(480px, 100%);
+  border: 1px solid var(--ok-line-strong);
+  border-radius: var(--ok-radius);
+  background: var(--ok-overlay);
+  box-shadow: 0 8px 24px -4px rgb(0 0 0 / 0.5);
+  color: var(--ok-ink);
+}
+.ok-prov__pophead { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 8px 12px; border-bottom: 1px solid var(--ok-line); font-size: 13px; font-weight: 600; }
+.ok-prov__pre { margin: 0; padding: 12px; border-bottom: 1px solid var(--ok-line); font: 400 12px/20px var(--ok-font-mono); white-space: pre-wrap; word-break: break-word; }
+.ok-prov__dl { margin: 0; padding: 12px; display: grid; grid-template-columns: 84px minmax(0, 1fr); gap: 6px 12px; font-size: 12px; }
+.ok-prov__dl dt { color: var(--ok-ink-subtle); }
+.ok-prov__dl dd { margin: 0; font-family: var(--ok-font-mono); overflow-wrap: anywhere; }
+.ok-prov__injected { color: var(--ok-accent-ink); }
+
+/* ---------- chart ---------- */
+
+.ok-chart { position: relative; min-width: 0; }
+.ok-chart__legend { display: flex; flex-wrap: wrap; gap: 4px 16px; margin-top: 8px; font-size: 12px; line-height: 16px; }
+.ok-chart__item { display: inline-flex; align-items: center; gap: 6px; min-width: 0; color: var(--ok-ink-muted); }
+.ok-chart__swatch { width: 10px; height: 2px; border-radius: 1px; flex: none; }
+.ok-chart__value { font-family: var(--ok-font-mono); color: var(--ok-ink); font-variant-numeric: tabular-nums; }
+.ok-chart__time { font-family: var(--ok-font-mono); color: var(--ok-ink-subtle); }
+.ok-chart__more { color: var(--ok-ink-subtle); }
+
+/* The few uPlot rules OpsKit relies on, so hosts don't need uPlot's stylesheet. */
+.ok-chart .uplot { font-family: inherit; }
+.ok-chart .u-wrap { position: relative; user-select: none; }
+.ok-chart .u-over,
+.ok-chart .u-under { position: absolute; }
+.ok-chart .u-over { overflow: hidden; }
+.ok-chart .uplot canvas { display: block; position: relative; width: 100%; height: 100%; }
+.ok-chart .u-cursor-x,
+.ok-chart .u-cursor-y { position: absolute; left: 0; top: 0; pointer-events: none; will-change: transform; }
+.ok-chart .u-cursor-x { height: 100%; border-right: 1px dashed var(--ok-line-strong); }
+.ok-chart .u-cursor-y { display: none; }
+.ok-chart .u-hz .u-cursor-x { height: 100%; }
+.ok-chart .u-cursor-pt { position: absolute; top: 0; left: 0; border-radius: 50%; border: 0 solid; pointer-events: none; will-change: transform; background-clip: padding-box !important; }
+.ok-chart .u-select { position: absolute; pointer-events: none; background: color-mix(in srgb, var(--ok-ink) 8%, transparent); }
+.ok-chart .u-off { display: none; }
+
+/* ---------- layout used by the OpenUI library ---------- */
+
+.ok-stack { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+.ok-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 16px; }
+.ok-heading { margin: 0; font-size: 28px; line-height: 32px; font-weight: 600; letter-spacing: -0.02em; }
+.ok-text { margin: 0; max-width: 72ch; font-size: 15px; line-height: 24px; color: var(--ok-ink-muted); }
+
+@media (prefers-reduced-motion: reduce) {
+  .ok-pip--live,
+  .ok-pip--warning,
+  .ok-skel { animation: none; }
+}

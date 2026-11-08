@@ -1,0 +1,32 @@
+{
+  "$schema": "https://ui.shadcn.com/schema/registry.json",
+  "name": "opskit",
+  "homepage": "https://github.com/yonigofman/opskit",
+  "items": [
+    {
+      "name": "opskit-base",
+      "type": "registry:lib",
+      "title": "OpsKit base",
+      "description": "Panel, states, provenance footer, formatting and the OpsKit stylesheet shared by every component.",
+      "dependencies": ["@opskit/core"],
+      "files": [
+        { "path": "src/components/panel.tsx", "type": "registry:component", "target": "components/opskit/panel.tsx" },
+        { "path": "src/components/states.tsx", "type": "registry:component", "target": "components/opskit/states.tsx" },
+        { "path": "src/components/provenance.tsx", "type": "registry:component", "target": "components/opskit/provenance.tsx" },
+        { "path": "src/components/format.ts", "type": "registry:lib", "target": "components/opskit/format.ts" },
+        { "path": "src/styles/opskit.css", "type": "registry:file", "target": "components/opskit/opskit.css" }
+      ]
+    },
+    {
+      "name": "prom-chart",
+      "type": "registry:component",
+      "title": "PromChart",
+      "description": "Live Prometheus/Mimir time series from a PromQL query, with every OpsKit state and provenance.",
+      "dependencies": ["@opskit/core", "uplot"],
+      "registryDependencies": ["https://raw.githubusercontent.com/yonigofman/opskit/main/packages/ui/public/r/opskit-base.json"],
+      "files": [
+        { "path": "src/components/prom-chart.tsx", "type": "registry:component", "target": "components/opskit/prom-chart.tsx" }
+      ]
+    }
+  ]
+}
