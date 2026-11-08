@@ -26,6 +26,7 @@ why = Text("Latency crossed the 500ms SLO when rev 42 rolled out.")
 - Strings use double quotes; escape inner quotes as `\"`. PromQL label matchers therefore look like `{namespace=\"shop\"}`.
 - `null` skips an optional positional argument (as `warnAt` above). OpsKit schemas use `.nullish()` for these.
 - Trailing optional arguments can be omitted.
+- Recorded answers for the playground live in `apps/playground/src/chat/scenarios.ts`; queries there are written once as constants with `\\"` escapes.
 - Other features (`$variables`, `Query`, `Mutation`, `@Run`, actions): see the official docs. **OpsKit components do not use `Query` or `Mutation`.** They fetch through their own hooks, and mutations happen only through ActionButton.
 
 ## OpsKit library
@@ -39,12 +40,12 @@ Defined in `packages/ui/src/openui.tsx`:
 | `Heading` | `Heading(text)`, states the conclusion |
 | `Text` | `Text(text)`, short prose, no invented numbers |
 | `PromChart` | `PromChart(title, query, range?, unit?, warnAt?, dangerAt?)` |
+| `StatTile` | `StatTile(label, query, range?, unit?, warnAt?, dangerAt?)` |
 
 The exact prompt the model sees is `opskitLibrary.prompt(opskitPromptOptions)`. Print it rather than guessing:
 
 ```bash
-pnpm --filter @opskit/ui build
-node --input-type=module -e "import { opskitLibrary, opskitPromptOptions } from './packages/ui/dist/index.js'; console.log(opskitLibrary.prompt(opskitPromptOptions))"
+pnpm --filter @opskit/core build && pnpm --filter @opskit/ui prompt
 ```
 
 ## Writing good agent output

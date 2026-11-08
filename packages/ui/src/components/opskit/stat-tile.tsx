@@ -1,9 +1,13 @@
 import { useStatTile, type PromSeries, type StatTileProps } from "@opskit/core";
-import { useMemo, useRef, useState } from "react";
-import { formatValue } from "./format.js";
-import { OpsPanel } from "./panel.js";
-import { ProvenanceFooter } from "./provenance.js";
-import { EmptyState, ForbiddenState, LoadingState, QueryErrorState } from "./states.js";
+import { useMemo } from "react";
+
+import { Badge } from "@/components/ui/badge";
+import { cn } from "@/lib/utils";
+import { formatValue } from "./format";
+import { OpsPanel } from "./panel";
+import { ProvenanceFooter } from "./provenance";
+import { EmptyState, ForbiddenState, LoadingState, QueryErrorState } from "./states";
+import { useElementWidth } from "./use-element-width";
 
 export interface StatTileViewProps extends StatTileProps {
   /** Seconds between refreshes; defaults to the provider's. */
@@ -81,6 +85,14 @@ function levelOf(value: number | null, warnAt: number | null | undefined, danger
 }
 
 const LEVEL_LABEL: Record<Level, string> = { ok: "OK", warning: "Warning", danger: "Danger" };
+const LEVEL_TEXT: Record<Level, string> = { ok: "text-foreground", warning: "text-warning", danger: "text-destructive" };
+const LEVEL_BADGE: Record<Level, string> = {
+  // "!" beats the badge variant's own colors from the shadcn style.
+  ok: "border-success/40! text-success!",
+  warning: "border-warning/40! text-warning!",
+  danger: "border-destructive/40! text-destructive!",
+};
+const LEVEL_STROKE: Record<Level, string> = { ok: "stroke-success", warning: "stroke-warning", danger: "stroke-destructive" };
 
 interface TileProps {
   value: number | null;
@@ -95,10 +107,14 @@ function Tile({ value, unit, warnAt, dangerAt, series }: TileProps) {
   const values = useMemo(() => series.flatMap((s) => s.values.map(([, v]) => v)), [series]);
 
   return (
-    <div className="ok-tile">
-      <div className={`ok-tile__value ok-tile__value--${level}`}>
-        <span className="ok-tile__number">{formatValue(value, unit)}</span>
-        <span className={`ok-badge ok-badge--${level === "ok" ? "success" : level}`}>{LEVEL_LABEL[level]}</span>
+    <div className="flex min-h-24 flex-col justify-center gap-2.5">
+      <div className="flex items-baseline gap-2.5">
+        <span className={cn("font-mono text-3xl font-semibold tracking-tight tabular-nums", LEVEL_TEXT[level])}>
+          {formatValue(value, unit)}
+        </span>
+        <Badge variant="outline" className={LEVEL_BADGE[level]}>
+          {LEVEL_LABEL[level]}
+        </Badge>
       </div>
       {values.length > 1 && (
         <Sparkline values={values} level={level} aria-label={`Trend: ${formatValue(value, unit)}, ${LEVEL_LABEL[level].toLowerCase()}`} />
@@ -119,31 +135,14 @@ function Sparkline({ values, level, "aria-label": ariaLabel }: { values: number[
 
   return (
     <svg
-      className={`ok-tile__spark ok-tile__spark--${level}`}
+      className="block h-8 w-full overflow-visible"
       viewBox={`0 0 ${w} ${h}`}
       preserveAspectRatio="none"
       role="img"
       aria-label={ariaLabel}
     >
-      <polyline points={points} fill="none" strokeWidth={1.5} vectorEffect="non-scaling-stroke" />
+      <polyline points={points} fill="none" strokeWidth={1.5} vectorEffect="non-scaling-stroke" className={LEVEL_STROKE[level]} />
     </svg>
   );
 }
 
-function useElementWidth<T extends HTMLElement>(): [React.RefCallback<T>, number] {
-  const [width, setWidth] = useState(0);
-  const observer = useRef<ResizeObserver | null>(null);
-  const ref = useMemo<React.RefCallback<T>>(
-    () => (node) => {
-      observer.current?.disconnect();
-      if (!node) return;
-      setWidth(Math.floor(node.getBoundingClientRect().width));
-      observer.current = new ResizeObserver(([entry]) => {
-        if (entry) setWidth(Math.floor(entry.contentRect.width));
-      });
-      observer.current.observe(node);
-    },
-    [],
-  );
-  return [ref, width];
-}

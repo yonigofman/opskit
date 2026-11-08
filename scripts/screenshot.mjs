@@ -35,17 +35,28 @@ try {
   });
   page.on("pageerror", (e) => problems.push(`page error: ${e.message}`));
 
+  // Chat: ask the scripted question, let the agent stream its answer and the mock Gateway respond.
   await page.goto(url);
-  // Let the recorded answer finish streaming, the mock Gateway answer, and the stale example fail a refresh.
-  await page.waitForTimeout(7000);
-  await page.screenshot({ path: join(outDir, "dark.png"), fullPage: true });
+  // Full-page shots stitch the page together; sticky bars would land mid-page.
+  await page.addStyleTag({ content: ".sticky { position: static !important; }" });
+  await page.getByRole("button", { name: "Why is checkout slow?" }).click();
+  await page.waitForTimeout(9000);
+  await page.screenshot({ path: join(outDir, "chat-dark.png"), fullPage: true });
 
-  await page.getByRole("button", { name: /light theme/i }).click();
+  // Gallery: every component in every state; stale needs one failed refresh.
+  await page.getByRole("button", { name: "gallery" }).click();
+  await page.waitForTimeout(6000);
+  await page.screenshot({ path: join(outDir, "gallery-dark.png"), fullPage: true });
+
+  await page.getByRole("button", { name: /switch to light theme/i }).click();
   await page.waitForTimeout(800);
-  await page.screenshot({ path: join(outDir, "light.png"), fullPage: true });
+  await page.screenshot({ path: join(outDir, "gallery-light.png"), fullPage: true });
+  await page.getByRole("button", { name: "chat" }).click();
+  await page.waitForTimeout(400);
+  await page.screenshot({ path: join(outDir, "chat-light.png"), fullPage: true });
   await browser.close();
 
-  console.log(`Wrote ${join(outDir, "dark.png")} and ${join(outDir, "light.png")}`);
+  console.log(`Wrote chat-dark, chat-light, gallery-dark and gallery-light .png to ${outDir}`);
   if (problems.length > 0) {
     console.error(problems.join("\n"));
     exitCode = 1;

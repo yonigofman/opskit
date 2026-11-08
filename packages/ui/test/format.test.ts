@@ -1,4 +1,4 @@
-import { formatValue, limitSeries, seriesNames, toColumns } from "../src/components/format";
+import { formatValue, limitSeries, seriesNames, toColumns } from "../src/components/opskit/format";
 
 describe("formatValue", () => {
   it.each([

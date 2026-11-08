@@ -1,21 +1,21 @@
 import { createLibrary, defineComponent, type PromptOptions } from "@openuidev/react-lang";
 import { promChartProps, statTileProps } from "@opskit/core";
 import { z } from "zod/v4";
-import { PromChart as PromChartView } from "./components/prom-chart.js";
-import { StatTile as StatTileView } from "./components/stat-tile.js";
+import { PromChart as PromChartView } from "./components/opskit/prom-chart";
+import { StatTile as StatTileView } from "./components/opskit/stat-tile";
 
 const Heading = defineComponent({
   name: "Heading",
   description: "The answer's headline: a conclusion, not a topic. \"Checkout slowed after rev 42\".",
   props: z.object({ text: z.string() }),
-  component: ({ props }) => <h2 className="ok-heading">{props.text}</h2>,
+  component: ({ props }) => <h2 className="text-2xl font-semibold tracking-tight text-balance">{props.text}</h2>,
 });
 
 const Text = defineComponent({
   name: "Text",
   description: "Short prose explaining what the components below show. Never invent numbers here.",
   props: z.object({ text: z.string() }),
-  component: ({ props }) => <p className="ok-text">{props.text}</p>,
+  component: ({ props }) => <p className="max-w-[72ch] text-[15px] leading-6 text-muted-foreground">{props.text}</p>,
 });
 
 const PromChart = defineComponent({
@@ -36,14 +36,14 @@ const Row = defineComponent({
   name: "Row",
   description: "Places charts side by side; wraps on narrow screens.",
   props: z.object({ children: z.array(z.union([PromChart.ref, StatTile.ref, Text.ref])) }),
-  component: ({ props, renderNode }) => <div className="ok-row">{renderNode(props.children)}</div>,
+  component: ({ props, renderNode }) => <div className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,20rem),1fr))] gap-4">{renderNode(props.children)}</div>,
 });
 
 const Stack = defineComponent({
   name: "Stack",
   description: "The root: components top to bottom, in the order a reader should see them.",
   props: z.object({ children: z.array(z.union([Heading.ref, Text.ref, PromChart.ref, StatTile.ref, Row.ref])) }),
-  component: ({ props, renderNode }) => <div className="ok-stack">{renderNode(props.children)}</div>,
+  component: ({ props, renderNode }) => <div className="flex min-w-0 flex-col gap-4">{renderNode(props.children)}</div>,
 });
 
 /** Every component an agent can render through OpsKit. Kept small on purpose: fewer choices, better output. */

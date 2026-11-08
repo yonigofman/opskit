@@ -1,27 +1,30 @@
 {
   "name": "@opskit/ui",
   "version": "0.1.0",
-  "description": "Styled OpsKit components and the OpenUI library agents render them through.",
+  "description": "OpsKit's shadcn-native components and the OpenUI library agents render them through. Distributed as a shadcn registry; consumed from source inside this repo.",
   "license": "Apache-2.0",
+  "private": true,
   "type": "module",
-  "main": "./dist/index.js",
-  "types": "./dist/index.d.ts",
   "exports": {
-    ".": {
-      "types": "./dist/index.d.ts",
-      "import": "./dist/index.js"
-    },
-    "./opskit.css": "./src/styles/opskit.css"
+    ".": "./src/index.ts",
+    "./opskit.css": "./src/styles/opskit.css",
+    "./shadcn-nova.css": "./src/styles/shadcn-nova.css"
   },
-  "files": ["dist", "src/styles", "registry.json"],
-  "sideEffects": ["*.css"],
+  "sideEffects": [
+    "*.css"
+  ],
   "scripts": {
-    "build": "tsc -p tsconfig.build.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test": "vitest run"
+    "test": "vitest run",
+    "prompt": "OPSKIT_PRINT_PROMPT=1 vitest run test/prompt.test.ts --silent=false --reporter=verbose"
   },
   "dependencies": {
     "@opskit/core": "workspace:*",
+    "class-variance-authority": "0.7.1",
+    "clsx": "2.1.1",
+    "lucide-react": "1.61.0",
+    "radix-ui": "1.8.1",
+    "tailwind-merge": "3.7.0",
     "uplot": "1.6.32"
   },
   "peerDependencies": {

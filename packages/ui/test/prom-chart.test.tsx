@@ -2,7 +2,7 @@ import { Renderer } from "@openuidev/react-lang";
 import { GatewayError, mockTransport, OpsKitProvider, type PromRangeResult } from "@opskit/core";
 import { render, screen, waitFor } from "@testing-library/react";
 import type { ReactNode } from "react";
-import { PromChart } from "../src/components/prom-chart";
+import { PromChart } from "../src/components/opskit/prom-chart";
 import { opskitLibrary } from "../src/openui";
 
 // jsdom has no canvas; the chart's own logic is covered by format tests.

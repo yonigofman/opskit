@@ -2,7 +2,7 @@ import { Renderer } from "@openuidev/react-lang";
 import { GatewayError, mockTransport, OpsKitProvider, type PromInstantResult, type PromRangeResult } from "@opskit/core";
 import { render, screen, waitFor } from "@testing-library/react";
 import type { ReactNode } from "react";
-import { StatTile } from "../src/components/stat-tile";
+import { StatTile } from "../src/components/opskit/stat-tile";
 import { opskitLibrary } from "../src/openui";
 
 // openui.tsx also registers PromChart, which imports uplot; jsdom has no canvas.

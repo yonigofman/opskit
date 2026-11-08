@@ -134,18 +134,6 @@ function promInstant(raw: Record<string, unknown>): PromInstantResult | Promise<
 
 export const transport = mockTransport({ prom_range: promRange, prom_instant: promInstant }, { latencyMs: 450 });
 
-/** What a model wrote for "why is checkout slow?", replayed token by token. */
-export const recordedAnswer = [
-  "root = Stack([title, stat, latency, row, why])",
-  'title = Heading("Checkout slowed down right after rev 42")',
-  'stat = StatTile("p95 latency · checkout", "histogram_quantile(0.95, sum by (le) (rate(http_request_duration_seconds_bucket{namespace=\\"shop\\", app=\\"checkout\\"}[5m])))", "15m", "s", null, 0.5)',
-  'latency = PromChart("p95 latency · checkout", "histogram_quantile(0.95, sum by (le) (rate(http_request_duration_seconds_bucket{namespace=\\"shop\\", app=\\"checkout\\"}[5m])))", "1h", "s", null, 0.5)',
-  "row = Row([errors, cpu])",
-  'errors = PromChart("5xx error rate · checkout", "100 * sum(rate(http_requests_total{namespace=\\"shop\\", app=\\"checkout\\", code=~\\"5..\\"}[5m])) / sum(rate(http_requests_total{namespace=\\"shop\\", app=\\"checkout\\"}[5m]))", "1h", "%", 1, 2)',
-  'cpu = PromChart("CPU by pod · checkout", "sum by (pod) (rate(container_cpu_usage_seconds_total{namespace=\\"shop\\", pod=~\\"checkout-.*\\"}[5m]))", "1h", "cores")',
-  'why = Text("Latency crossed the 500ms SLO when rev 42 rolled out, and 5xx errors rose with it. CPU stayed flat, so the pods are waiting on something, not working harder.")',
-].join("\n");
-
 /** One PromChart per state, for the states gallery. */
 export const stateExamples = [
   { state: "Live", title: "Throughput · checkout", query: 'sum(rate(http_requests_total{namespace="shop", app="checkout"}[5m]))', unit: "req/s" },

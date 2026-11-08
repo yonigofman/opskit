@@ -1,10 +1,11 @@
 import { usePromRange, type PromChartProps, type PromSeries } from "@opskit/core";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import uPlot from "uplot";
-import { formatValue, limitSeries, seriesNames, toColumns } from "./format.js";
-import { OpsPanel } from "./panel.js";
-import { ProvenanceFooter } from "./provenance.js";
-import { EmptyState, ForbiddenState, LoadingState, QueryErrorState } from "./states.js";
+import { formatValue, limitSeries, seriesNames, toColumns } from "./format";
+import { OpsPanel } from "./panel";
+import { ProvenanceFooter } from "./provenance";
+import { EmptyState, ForbiddenState, LoadingState, QueryErrorState } from "./states";
+import { useElementWidth } from "./use-element-width";
 
 export interface PromChartViewProps extends PromChartProps {
   /** Plot height in pixels. */
@@ -96,6 +97,8 @@ function Plot({ series, title, unit, warnAt, dangerAt, height, width }: PlotProp
 
   // Build the plot when its shape changes; feed new data without rebuilding.
   const shapeKey = `${names.join("|")}|${unit}|${warnAt}|${dangerAt}|${height}|${colors.join(",")}`;
+  // Rebuild when the plot becomes visible again: a rebuild while hidden (width 0) is skipped.
+  const visible = width > 0;
   useEffect(() => {
     const el = host.current;
     if (!el || width <= 0 || colors.length === 0) return;
@@ -107,7 +110,7 @@ function Plot({ series, title, unit, warnAt, dangerAt, height, width }: PlotProp
     };
     // columns are pushed by the effect below; width by the one after.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [shapeKey]);
+  }, [shapeKey, visible]);
 
   useEffect(() => {
     plot.current?.setData(columns as uPlot.AlignedData);
@@ -122,18 +125,18 @@ function Plot({ series, title, unit, warnAt, dangerAt, height, width }: PlotProp
   const at = times[idx];
 
   return (
-    <div className="ok-chart">
+    <div data-slot="opskit-chart" className="opskit-uplot relative min-w-0">
       <div ref={host} style={{ height }} role="img" aria-label={`${title}: ${describe(names, columns, unit)}`} />
-      <div className="ok-chart__legend">
-        {at !== undefined && <span className="ok-chart__time">{formatTime(at)}</span>}
+      <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs">
+        {at !== undefined && <span className="font-mono text-muted-foreground">{formatTime(at)}</span>}
         {names.map((name, i) => (
-          <span key={name} className="ok-chart__item">
-            <span className="ok-chart__swatch" style={{ background: colors[i] }} aria-hidden="true" />
+          <span key={name} className="inline-flex min-w-0 items-center gap-1.5 text-muted-foreground">
+            <span aria-hidden="true" className="h-0.5 w-2.5 shrink-0 rounded-full" style={{ background: colors[i] }} />
             <span>{name}</span>
-            <span className="ok-chart__value">{formatValue(columns[i + 1]?.[idx], unit)}</span>
+            <span className="font-mono text-foreground tabular-nums">{formatValue(columns[i + 1]?.[idx], unit)}</span>
           </span>
         ))}
-        {hidden > 0 && <span className="ok-chart__more">+{hidden} more series hidden</span>}
+        {hidden > 0 && <span className="text-muted-foreground">+{hidden} more series hidden</span>}
       </div>
     </div>
   );
@@ -152,10 +155,10 @@ function buildOptions(p: {
 }): uPlot.Options {
   const style = getComputedStyle(p.el);
   const css = (name: string, fallback: string) => style.getPropertyValue(name).trim() || fallback;
-  const axisInk = css("--ok-ink-subtle", "#84848e");
-  const grid = css("--ok-line", "#232327");
-  const danger = css("--ok-danger", "#ff7a6b");
-  const warning = css("--ok-warning", "#f5b740");
+  const axisInk = css("--muted-foreground", "#84848e");
+  const grid = css("--border", "#232327");
+  const danger = css("--destructive", "#ff7a6b");
+  const warning = css("--warning", "#f5b740");
   // Models write null for "no threshold" in positional OpenUI Lang; treat it like undefined.
   const thresholds = [
     p.warnAt != null ? { value: p.warnAt, color: warning } : null,
@@ -166,7 +169,7 @@ function buildOptions(p: {
     stroke: axisInk,
     grid: { stroke: grid, width: 1 },
     ticks: { stroke: grid, width: 1, size: 4 },
-    font: `11px ${css("--ok-font-mono", "ui-monospace, monospace")}`,
+    font: `11px ${css("--font-mono", "ui-monospace, monospace")}`,
   };
 
   return {
@@ -221,7 +224,7 @@ function buildOptions(p: {
             ctx.lineTo(u.bbox.left + u.bbox.width, y);
             ctx.stroke();
             ctx.fillStyle = t.color;
-            ctx.font = `${11 * devicePixelRatio}px ${css("--ok-font-mono", "monospace")}`;
+            ctx.font = `${11 * devicePixelRatio}px ${css("--font-mono", "monospace")}`;
             ctx.textAlign = "right";
             ctx.fillText(formatValue(t.value, p.unit), u.bbox.left + u.bbox.width - 4, y - 4 * devicePixelRatio);
             ctx.restore();
@@ -243,35 +246,18 @@ function useChartColors(ref: React.RefObject<HTMLElement | null>, count: number)
       const fallback = ["#7ba011", "#3295ee", "#d6629e", "#cd7b00", "#00a29c", "#9979e7"];
       const next = Array.from({ length: count }, (_, i) => {
         const n = (i % 6) + 1;
-        return style.getPropertyValue(`--ok-chart-${n}`).trim() || fallback[n - 1]!;
+        return style.getPropertyValue(`--chart-${n}`).trim() || fallback[n - 1]!;
       });
       setColors((prev) => (prev.join() === next.join() ? prev : next));
     };
     read();
     const observer = new MutationObserver(read);
-    observer.observe(document.documentElement, { attributes: true, subtree: true, attributeFilter: ["class", "data-opskit-theme", "style"] });
+    observer.observe(document.documentElement, { attributes: true, subtree: true, attributeFilter: ["class", "data-theme", "style"] });
     return () => observer.disconnect();
   }, [ref, count]);
   return colors;
 }
 
-function useElementWidth<T extends HTMLElement>(): [React.RefCallback<T>, number] {
-  const [width, setWidth] = useState(0);
-  const observer = useRef<ResizeObserver | null>(null);
-  const ref = useMemo<React.RefCallback<T>>(
-    () => (node) => {
-      observer.current?.disconnect();
-      if (!node) return;
-      setWidth(Math.floor(node.getBoundingClientRect().width));
-      observer.current = new ResizeObserver(([entry]) => {
-        if (entry) setWidth(Math.floor(entry.contentRect.width));
-      });
-      observer.current.observe(node);
-    },
-    [],
-  );
-  return [ref, width];
-}
 
 function formatTime(unixSeconds: number): string {
   return new Date(unixSeconds * 1000).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });

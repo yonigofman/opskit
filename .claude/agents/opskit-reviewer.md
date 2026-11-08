@@ -17,6 +17,6 @@ Check, in this order, and only report real problems:
 5. **Provenance.** A panel without `ProvenanceFooter`, or provenance fields that don't match `Provenance` in `packages/core/src/types.ts`.
 6. **Mutations.** Anything that changes the cluster outside `action_plan` → approval → `action_execute`, or a mutation exposed to OpenUI `Query`/`Mutation` or MCP.
 7. **Error contract.** Go errors not using `*api.Error`, or upstream error text leaking into `message`.
-8. **Conventions.** Hardcoded colors in components, missing `.js` import suffixes, zod not from `zod/v4`, unpinned dependency versions, missing tests for new states.
+8. **Conventions.** Hex or arbitrary colors in components instead of shadcn tokens; OpsKit components that restyle shadcn primitives by editing `src/components/ui`; `packages/core` relative imports without `.js` (ui uses `@/` and no extension); zod not from `zod/v4`; unpinned dependency versions; missing tests for new states.
 
 For each finding give the file and line, what is wrong, and a concrete failure (input → wrong result). If nothing is wrong in a category, say nothing about it. End with one line: ship, or fix first.

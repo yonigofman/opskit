@@ -9,8 +9,10 @@ Full design: `docs/spec.md`. Read it before changing contracts, the Gateway, or 
 ```text
 gateway/            Go Tools API. Only thing that talks to Kubernetes / Prometheus / Loki
 packages/core/      @opskit/core, headless: Transport, hooks, prop schemas (zod), types
-packages/ui/        @opskit/ui: styled components, OpenUI library, shadcn registry, opskit.css
-apps/playground/    Vite demo on a mock Gateway (src/fixtures.ts)
+packages/ui/        @opskit/ui, shadcn-native: OpsKit components (src/components/opskit), vendored shadcn
+                    primitives (src/components/ui), OpenUI library, registry.json. Consumed from source.
+apps/playground/    Vite + Tailwind v4 demo on a mock Gateway: an AI Elements-style agent chat (src/chat)
+                    and a gallery of every component state (src/Gallery.tsx, src/fixtures.ts)
 docs/spec.md        v1 spec: catalog, Tools API, states, security, budgets, milestones
 ```
 
@@ -18,12 +20,12 @@ docs/spec.md        v1 spec: catalog, Tools API, states, security, budgets, mile
 
 ```bash
 pnpm install
-pnpm build                  # turbo: core → ui → playground (ui imports core's dist, so build first)
+pnpm build                  # turbo: core (tsc → dist) → playground (vite). ui has no build: it's source
 pnpm test                   # vitest in core + ui
 pnpm typecheck
 pnpm dev                    # playground at http://localhost:5173
 cd gateway && go vet ./... && go test ./... && gofmt -l .
-node scripts/screenshot.mjs # builds nothing; serves apps/playground/dist and screenshots it
+node scripts/screenshot.mjs # serves apps/playground/dist; chat + gallery, dark + light, into .screenshots/
 ```
 
 After changing `packages/core`, rebuild it (`pnpm --filter @opskit/core build`) before testing `packages/ui` or the playground: they resolve `@opskit/core` through its `dist`.
@@ -32,7 +34,7 @@ After changing `packages/core`, rebuild it (`pnpm --filter @opskit/core build`) 
 
 1. **Refs, not data.** Component props are queries, selectors, ranges and thresholds. A component never accepts metric values, pod lists or log lines as props. Schemas live in `packages/core/src/schemas.ts`.
 2. **The Gateway is the only path to the cluster.** Browser code calls `transport.call(tool, args)` and nothing else. No direct fetches to Prometheus, Loki or the API server, ever.
-3. **Six states, same treatment everywhere:** `loading | ready | empty | error | forbidden | stale` (`DataStatus` in core). Use the shared views in `packages/ui/src/components/states.tsx`.
+3. **Six states, same treatment everywhere:** `loading | ready | empty | error | forbidden | stale` (`DataStatus` in core). Use the shared views in `packages/ui/src/components/opskit/states.tsx`.
    - forbidden: say who you ran as and what was denied; reveal nothing about the target (not even whether data exists).
    - stale: keep the last data, dimmed, with its age. Never an empty chart that looks like zero.
    - error for `invalid_query`: show the query with the broken character underlined (`position`).
@@ -42,9 +44,15 @@ After changing `packages/core`, rebuild it (`pnpm --filter @opskit/core build`) 
 
 ## Conventions
 
-- TypeScript ESM with `verbatimModuleSyntax`: relative imports end in `.js` (`./panel.js`), type-only imports use `import type`.
+- TypeScript ESM with `verbatimModuleSyntax`; type-only imports use `import type`.
+  - `packages/core` is compiled by tsc: relative imports end in `.js` (`./range.js`).
+  - `packages/ui` and the playground are source, shadcn-style: no extensions, and `@/` imports (`@/components/ui/card`, `@/lib/utils`). `@` maps to `packages/ui/src` in tsconfig, vitest and vite.
 - Zod: `import { z } from "zod/v4"` (OpenUI requires it). Schema key order = positional order in OpenUI Lang: required props first. Optional thresholds are `.nullish()` because models write `null`.
-- Styling: plain CSS classes `ok-*` in `packages/ui/src/styles/opskit.css`. Colors only through `--ok-*` variables, which read shadcn v4 vars first, then `--okf-*` fallbacks. No hex in components, no Tailwind dependency.
+- **Shadcn-native UI.** Components are Tailwind v4 utilities on shadcn primitives (`Card`, `Badge`, `Button`, `Skeleton`, `Popover`, `CodeBlock`), imported from `@/components/ui/*` so a registry install picks up the user's own copies.
+  - Colors only through shadcn tokens (`text-muted-foreground`, `bg-destructive/10`, `border-ring`) plus OpsKit's three extra tokens `warning`, `success`, `chart-6` (defined in `packages/ui/src/styles/opskit.css` and in `registry.json` `cssVars`: keep both in sync). No hex, no arbitrary colors.
+  - `packages/ui/src/components/ui/*` are vendored shadcn sources (radix base, MIT, header in each file) styled by `src/styles/shadcn-nova.css` (`cn-*` classes, `.style-nova` on body). Don't edit them to fix an OpsKit look; override from the OpsKit component. A badge variant's colors need the `!` modifier to override (`text-warning!`).
+  - New primitive needed? Vendor it from shadcn's `registry/bases/radix/ui` (icons → `lucide-react`), add its section to `shadcn-nova.css`, and add its name to the base item's `registryDependencies`.
+- **AI Elements patterns** (chat, reasoning, tool calls, prompt input) live in the playground, built from shadcn's `Message`, `Bubble`, `Trace`, `CodeBlock`, `InputGroup`. OpsKit renders inside the assistant message; it does not ship a chat.
 - Canvas-drawn things (uPlot) read colors from CSS at runtime (`useChartColors`), never hardcode them.
 - Kubernetes words stay as Kubernetes says them: `CrashLoopBackOff`, `OOMKilled`, `NotReady`.
 - UI copy: sentence case, plain and specific ("No pods match `app=cart` in shop"), no exclamation marks, no "Oops".
@@ -57,7 +65,9 @@ After changing `packages/core`, rebuild it (`pnpm --filter @opskit/core build`) 
 | Part | State |
 | --- | --- |
 | core: transport, dedupe, mock, `usePromRange` | done |
-| ui: `PromChart`, `StatTile`, panel, states, provenance, OpenUI library | done |
+| ui: `PromChart`, `StatTile`, panel, states, provenance, OpenUI library (shadcn-native) | done |
+| playground: AI Elements-style chat with scripted agent turns + states gallery | done |
+| registry: `shadcn build` output in `packages/ui/public/r` (the URLs in registry.json) | not yet |
 | gateway: Tools API skeleton + error contract | done |
 | gateway: auth (OIDC + impersonation), Prometheus/Mimir adapter with namespace injection | next (M1) |
 | PodTable, LogTail, EventTimeline, ActionButton | designed, not built |

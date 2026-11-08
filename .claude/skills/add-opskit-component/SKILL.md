@@ -8,7 +8,7 @@ description: Build a new OpsKit component (StatTile, PodTable, LogTail, EventTim
 PromChart is the reference implementation. Before starting, read:
 
 - `packages/core/src/schemas.ts`, `packages/core/src/usePromRange.ts`
-- `packages/ui/src/components/prom-chart.tsx`, `states.tsx`, `provenance.tsx`, `panel.tsx`
+- `packages/ui/src/components/opskit/prom-chart.tsx`, `stat-tile.tsx`, `states.tsx`, `provenance.tsx`, `panel.tsx`
 - The component's row in `docs/spec.md` (Component catalog) for its props and data source
 
 Work through these steps in order. Each step names the file it touches.
@@ -40,12 +40,14 @@ Follow `usePromRange`:
 
 Rebuild core before moving on: `pnpm --filter @opskit/core build`.
 
-## 3. View: `packages/ui/src/components/<kebab-name>.tsx`
+## 3. View: `packages/ui/src/components/opskit/<kebab-name>.tsx`
 
 - Wrap everything in `OpsPanel` with `kicker="<Name>"` and `status`.
 - Switch on status and use the shared views from `states.tsx`: `LoadingState`, `EmptyState` (scoped message: what matched nothing, where), `QueryErrorState`, `ForbiddenState`. For stale, keep rendering the data; the panel dims it.
 - Footer: `ProvenanceFooter` with the right `source`.
-- Styling: add `ok-<name>__*` classes to `packages/ui/src/styles/opskit.css`, colors only from `--ok-*` variables. Status always has a word or shape too, never color alone.
+- Styling is shadcn-native: Tailwind utilities on shadcn primitives imported from `@/components/ui/*` (`Badge`, `Button`, `Popover`, `CodeBlock`, `Skeleton`…), `cn` from `@/lib/utils`. Imports have no extension. Colors only from shadcn tokens plus `warning`, `success`, `chart-6`; no hex. Status always has a word or shape too, never color alone.
+- Need a primitive that isn't vendored yet (table, tabs, scroll-area…)? Vendor it as described in `CLAUDE.md` (Conventions) before using it.
+- Canvas or SVG drawing reads colors from CSS variables at runtime (see `useChartColors` in `prom-chart.tsx`). Anything that measures width uses `useElementWidth` and must rebuild when it becomes visible again (width going from 0 to > 0).
 - Lists that can be long (pods, log lines) must be virtualized or capped. Log lines are batched per animation frame.
 - Export from `packages/ui/src/index.ts`.
 
@@ -58,12 +60,13 @@ Rebuild core before moving on: `pnpm --filter @opskit/core build`.
 
 ## 5. Registry: `packages/ui/registry.json`
 
-Add an item with `"registryDependencies"` on `opskit-base`, its npm `dependencies`, and the file with `"target": "components/opskit/<kebab-name>.tsx"`.
+Add an item with `"registryDependencies"` on `opskit-base` plus any shadcn primitive it uses directly (by name, e.g. `"table"`), its npm `dependencies`, and the file with `"target": "components/opskit/<kebab-name>.tsx"`. Component-specific CSS goes in the item's `css` field, not a new stylesheet.
 
-## 6. Playground: `apps/playground/src/fixtures.ts` and `App.tsx`
+## 6. Playground: `apps/playground/src/fixtures.ts`, `Gallery.tsx`, `chat/scenarios.ts`
 
 - Add a mock handler for the tool to `mockTransport({...})`. Make it return each state by query or selector (follow the `payments` = forbidden, `orders-worker` = empty conventions already there).
-- Add the component to the recorded agent answer if it belongs in the checkout story, and add a states gallery section like PromChart's.
+- Add a section to `Gallery.tsx` showing every state, like PromChart's.
+- Use it in a chat scenario (`chat/scenarios.ts`): extend the checkout answer if it belongs in that story, or add a scenario with its own prompt, reasoning and tool steps.
 
 ## 7. Tests: `packages/ui/test/<kebab-name>.test.tsx`
 

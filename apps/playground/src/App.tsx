@@ -1,116 +1,66 @@
-import { Renderer } from "@openuidev/react-lang";
 import { OpsKitProvider } from "@opskit/core";
-import { opskitLibrary, PromChart, StatTile } from "@opskit/ui";
+import { MoonIcon, SunIcon } from "lucide-react";
 import { useEffect, useState } from "react";
-import { recordedAnswer, stateExamples, statTileExamples, transport } from "./fixtures";
 
-type Theme = "dark" | "light";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
+import { Chat } from "./chat/Chat";
+import { transport } from "./fixtures";
+import { Gallery } from "./Gallery";
+
+type View = "chat" | "gallery";
 
 export function App() {
-  const [theme, setTheme] = useState<Theme>("dark");
-
-  return (
-    <div className="app" data-opskit-theme={theme}>
-      <header className="topbar">
-        <span className="brand">OpsKit</span>
-        <span className="muted mono">playground · mock Gateway · shop</span>
-        <span className="spacer" />
-        <button type="button" className="ok-button" onClick={() => setTheme(theme === "dark" ? "light" : "dark")}>
-          {theme === "dark" ? "Light" : "Dark"} theme
-        </button>
-      </header>
-
-      <OpsKitProvider transport={transport} refreshSeconds={15}>
-        <main className="main">
-          <AgentAnswer />
-          <section className="section">
-            <div className="section__head">
-              <span className="kicker">Component</span>
-              <h2 className="section__title">PromChart, every state</h2>
-              <p className="muted">Same component, six answers from the Gateway. Stale shows after its first refresh fails.</p>
-            </div>
-            <div className="grid">
-              {stateExamples.map((ex) => (
-                <div key={ex.state} className="cell">
-                  <span className="kicker">{ex.state}</span>
-                  <PromChart
-                    title={ex.title}
-                    query={ex.query}
-                    range={"range" in ex ? ex.range : "1h"}
-                    unit={"unit" in ex ? ex.unit : undefined}
-                    refreshSeconds={"refreshSeconds" in ex ? ex.refreshSeconds : 0}
-                    height={160}
-                  />
-                </div>
-              ))}
-            </div>
-          </section>
-          <section className="section">
-            <div className="section__head">
-              <span className="kicker">Component</span>
-              <h2 className="section__title">StatTile, every state</h2>
-              <p className="muted">One headline number per answer, with a sparkline and threshold colors.</p>
-            </div>
-            <div className="grid">
-              {statTileExamples.map((ex) => (
-                <div key={ex.state} className="cell">
-                  <span className="kicker">{ex.state}</span>
-                  <StatTile
-                    label={ex.label}
-                    query={ex.query}
-                    range={"range" in ex ? ex.range : "1h"}
-                    unit={"unit" in ex ? ex.unit : undefined}
-                    warnAt={"warnAt" in ex ? ex.warnAt : undefined}
-                    dangerAt={"dangerAt" in ex ? ex.dangerAt : undefined}
-                    refreshSeconds={"refreshSeconds" in ex ? ex.refreshSeconds : 0}
-                  />
-                </div>
-              ))}
-            </div>
-          </section>
-        </main>
-      </OpsKitProvider>
-    </div>
-  );
-}
-
-/** Replays a recorded model response so you can watch components appear and fetch while it streams. */
-function AgentAnswer() {
-  const [shown, setShown] = useState("");
-  const [run, setRun] = useState(0);
-  const streaming = shown.length < recordedAnswer.length;
+  const [view, setView] = useState<View>(() => (location.hash === "#gallery" ? "gallery" : "chat"));
+  const [dark, setDark] = useState(true);
 
   useEffect(() => {
-    setShown("");
-    let i = 0;
-    const id = setInterval(() => {
-      i = Math.min(recordedAnswer.length, i + 9);
-      setShown(recordedAnswer.slice(0, i));
-      if (i >= recordedAnswer.length) clearInterval(id);
-    }, 24);
-    return () => clearInterval(id);
-  }, [run]);
+    document.documentElement.classList.toggle("dark", dark);
+  }, [dark]);
+
+  useEffect(() => {
+    history.replaceState(null, "", view === "gallery" ? "#gallery" : "#");
+  }, [view]);
 
   return (
-    <section className="section">
-      <div className="section__head">
-        <span className="kicker">Agent answer</span>
-        <h1 className="hero">Why is checkout slow?</h1>
-      </div>
-      <div className="answer">
-        <aside className="source">
-          <div className="source__head">
-            <span className="kicker">OpenUI Lang · {streaming ? "streaming" : "done"}</span>
-            <button type="button" className="ok-button" onClick={() => setRun((r) => r + 1)}>
-              Replay
-            </button>
-          </div>
-          <pre className="source__code">{shown}</pre>
-        </aside>
-        <div className="rendered">
-          <Renderer library={opskitLibrary} response={shown} isStreaming={streaming} />
+    <div className="flex min-h-svh flex-col">
+      <header className="sticky top-0 z-20 flex h-12 items-center gap-3 border-b bg-background/90 px-4 backdrop-blur">
+        <span className="font-semibold">OpsKit</span>
+        <Badge variant="outline" className="font-mono">
+          mock Gateway
+        </Badge>
+        <nav aria-label="Views" className="ml-2 flex gap-1">
+          {(["chat", "gallery"] as const).map((v) => (
+            <Button
+              key={v}
+              variant="ghost"
+              size="sm"
+              aria-current={view === v ? "page" : undefined}
+              className={cn("capitalize", view === v && "bg-muted")}
+              onClick={() => setView(v)}
+            >
+              {v}
+            </Button>
+          ))}
+        </nav>
+        <Button
+          variant="ghost"
+          size="icon-sm"
+          className="ml-auto"
+          aria-label={dark ? "Switch to light theme" : "Switch to dark theme"}
+          onClick={() => setDark((d) => !d)}
+        >
+          {dark ? <SunIcon /> : <MoonIcon />}
+        </Button>
+      </header>
+      <OpsKitProvider transport={transport} refreshSeconds={15}>
+        {/* Keep the chat mounted so switching views doesn't lose the conversation. */}
+        <div hidden={view !== "chat"} className="flex flex-1 flex-col">
+          <Chat />
         </div>
-      </div>
-    </section>
+        {view === "gallery" && <Gallery />}
+      </OpsKitProvider>
+    </div>
   );
 }

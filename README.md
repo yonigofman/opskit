@@ -17,7 +17,8 @@ Early. v1 is being built in the open.
 | Part | State |
 | --- | --- |
 | `@opskit/core`: Gateway client, live hooks, mock transport | `usePromRange` done |
-| `@opskit/ui`: styled components + OpenUI library | `PromChart` done |
+| `@opskit/ui`: shadcn-native components + OpenUI library | `PromChart`, `StatTile` done |
+| Playground: AI Elements-style agent chat + states gallery | done |
 | Gateway (Go) | Tools API skeleton; adapters next |
 | StatTile, PodTable, LogTail, EventTimeline, ActionButton | Designed, not built |
 
@@ -40,7 +41,7 @@ pnpm build
 pnpm dev        # playground on http://localhost:5173, against a mock Gateway
 ```
 
-The playground replays a recorded model answer to "why is checkout slow?" and shows `PromChart` in every state.
+The playground is an agent chat built from shadcn's AI Elements patterns (Message, Trace, Code Block, Prompt Input). Pick a question: the scripted agent reasons, calls read-only tools, and answers with live OpsKit components. The Gallery tab shows every component in every state.
 
 ## Use it
 
@@ -48,7 +49,6 @@ The playground replays a recorded model answer to "why is checkout slow?" and sh
 import { OpsKitProvider, httpTransport } from "@opskit/core";
 import { PromChart, opskitLibrary } from "@opskit/ui";
 import { Renderer } from "@openuidev/react-lang";
-import "@opskit/ui/opskit.css";
 
 <OpsKitProvider transport={httpTransport({ url: "/opskit", getToken })}>
   {/* render what the agent wrote */}
@@ -63,19 +63,19 @@ Give the model the catalog with `opskitLibrary.prompt(opskitPromptOptions)`.
 
 Use `mockTransport({...})` instead of `httpTransport` for demos and tests: components behave exactly as they do live.
 
-### Theming
+### Install (shadcn-native)
 
-Components read shadcn/ui (v4) CSS variables (`--background`, `--card`, `--border`, `--chart-1`…), so they pick up your app's theme with no setup. Without shadcn they fall back to OpsKit's own look; set `data-opskit-theme="light"` or `"dark"` on any ancestor.
+OpsKit's components are shadcn components: Tailwind v4 on your own `Card`, `Badge`, `Popover` and `Code Block`, so they take on your theme with no extra setup. Add them from the registry (`packages/ui/registry.json`) next to shadcn's AI Elements, and install `@opskit/core` from npm for the data layer.
 
-Copy the source instead of installing: `packages/ui/registry.json` is a shadcn registry.
+Apps without shadcn can still use `@opskit/core` (headless hooks and transport) and render their own UI.
 
 ## Repo layout
 
 ```text
 gateway/            Go: Tools API, adapters, auth, action engine
 packages/core/      @opskit/core: transport, hooks, component contract (headless)
-packages/ui/        @opskit/ui: styled components, OpenUI library, shadcn registry
-apps/playground/    demo app on a mock Gateway
+packages/ui/        @opskit/ui: shadcn-native components, OpenUI library, shadcn registry
+apps/playground/    agent chat + gallery on a mock Gateway
 ```
 
 ## Development
@@ -94,7 +94,7 @@ The repo is set up for Claude Code:
 - `docs/spec.md`: the full v1 spec
 - `.claude/skills/`: `add-opskit-component`, `add-gateway-tool`, `verify-opskit`, `openui-lang`
 - `.claude/agents/opskit-reviewer.md`: reviews a diff against the invariants
-- `pnpm screenshot`: renders the playground in both themes into `.screenshots/` (first run: `pnpm exec playwright install chromium`)
+- `pnpm screenshot`: renders the chat and gallery in both themes into `.screenshots/` (first run: `pnpm exec playwright install chromium`)
 
 Try: "Add StatTile using the add-opskit-component skill".
 

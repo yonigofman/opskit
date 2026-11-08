@@ -7,14 +7,32 @@
       "name": "opskit-base",
       "type": "registry:lib",
       "title": "OpsKit base",
-      "description": "Panel, states, provenance footer, formatting and the OpsKit stylesheet shared by every component.",
-      "dependencies": ["@opskit/core"],
+      "description": "Panel, states, provenance footer and formatting shared by every OpsKit component.",
+      "dependencies": ["@opskit/core", "lucide-react"],
+      "registryDependencies": ["card", "badge", "button", "skeleton", "popover", "code-block"],
+      "cssVars": {
+        "theme": {
+          "color-warning": "var(--warning)",
+          "color-success": "var(--success)",
+          "color-chart-6": "var(--chart-6)"
+        },
+        "light": {
+          "warning": "oklch(0.55 0.13 70)",
+          "success": "oklch(0.52 0.12 160)",
+          "chart-6": "oklch(0.55 0.15 290)"
+        },
+        "dark": {
+          "warning": "oklch(0.8 0.15 75)",
+          "success": "oklch(0.78 0.16 155)",
+          "chart-6": "oklch(0.65 0.15 290)"
+        }
+      },
       "files": [
-        { "path": "src/components/panel.tsx", "type": "registry:component", "target": "components/opskit/panel.tsx" },
-        { "path": "src/components/states.tsx", "type": "registry:component", "target": "components/opskit/states.tsx" },
-        { "path": "src/components/provenance.tsx", "type": "registry:component", "target": "components/opskit/provenance.tsx" },
-        { "path": "src/components/format.ts", "type": "registry:lib", "target": "components/opskit/format.ts" },
-        { "path": "src/styles/opskit.css", "type": "registry:file", "target": "components/opskit/opskit.css" }
+        { "path": "src/components/opskit/panel.tsx", "type": "registry:component", "target": "components/opskit/panel.tsx" },
+        { "path": "src/components/opskit/states.tsx", "type": "registry:component", "target": "components/opskit/states.tsx" },
+        { "path": "src/components/opskit/provenance.tsx", "type": "registry:component", "target": "components/opskit/provenance.tsx" },
+        { "path": "src/components/opskit/format.ts", "type": "registry:lib", "target": "components/opskit/format.ts" },
+        { "path": "src/components/opskit/use-element-width.ts", "type": "registry:hook", "target": "components/opskit/use-element-width.ts" }
       ]
     },
     {
@@ -24,8 +42,21 @@
       "description": "Live Prometheus/Mimir time series from a PromQL query, with every OpsKit state and provenance.",
       "dependencies": ["@opskit/core", "uplot"],
       "registryDependencies": ["https://raw.githubusercontent.com/yonigofman/opskit/main/packages/ui/public/r/opskit-base.json"],
+      "css": {
+        "@layer components": {
+          ".opskit-uplot .u-wrap": { "position": "relative", "user-select": "none" },
+          ".opskit-uplot .u-over, .opskit-uplot .u-under": { "position": "absolute" },
+          ".opskit-uplot .u-over": { "overflow": "hidden" },
+          ".opskit-uplot .uplot canvas": { "display": "block", "position": "relative", "width": "100%", "height": "100%" },
+          ".opskit-uplot .u-cursor-x, .opskit-uplot .u-cursor-y": { "position": "absolute", "left": "0", "top": "0", "pointer-events": "none" },
+          ".opskit-uplot .u-cursor-x": { "height": "100%", "border-right": "1px dashed var(--border)" },
+          ".opskit-uplot .u-cursor-y": { "display": "none" },
+          ".opskit-uplot .u-cursor-pt": { "position": "absolute", "top": "0", "left": "0", "border-radius": "50%", "pointer-events": "none" },
+          ".opskit-uplot .u-off": { "display": "none" }
+        }
+      },
       "files": [
-        { "path": "src/components/prom-chart.tsx", "type": "registry:component", "target": "components/opskit/prom-chart.tsx" }
+        { "path": "src/components/opskit/prom-chart.tsx", "type": "registry:component", "target": "components/opskit/prom-chart.tsx" }
       ]
     },
     {
@@ -36,7 +67,7 @@
       "dependencies": ["@opskit/core"],
       "registryDependencies": ["https://raw.githubusercontent.com/yonigofman/opskit/main/packages/ui/public/r/opskit-base.json"],
       "files": [
-        { "path": "src/components/stat-tile.tsx", "type": "registry:component", "target": "components/opskit/stat-tile.tsx" }
+        { "path": "src/components/opskit/stat-tile.tsx", "type": "registry:component", "target": "components/opskit/stat-tile.tsx" }
       ]
     }
   ]

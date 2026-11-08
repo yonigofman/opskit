@@ -18,18 +18,21 @@ node scripts/screenshot.mjs
 
 `scripts/screenshot.mjs` serves `apps/playground/dist` and writes the screenshots to `.screenshots/` (git-ignored):
 
-- `dark.png` and `light.png`, full page;
+- `chat-dark.png` / `chat-light.png`: the "Why is checkout slow?" chat after the agent finished;
+- `gallery-dark.png` / `gallery-light.png`: every component in every state;
 - console errors, printed (anything printed there is a failure).
 
 ## Look at the screenshots
 
 Open both PNGs with the Read tool and check:
 
-- The agent answer rendered fully (heading, all charts, the closing text) and nothing is cut off.
+- The chat shows the user bubble, the reasoning and tool trace rows, and the full OpsKit answer (heading, tiles, charts, closing text); nothing cut off.
 - Every component shows the state its gallery label says: Live, Loading, Empty, Error (query underlined), Forbidden (lock, "Ran as …"), Stale (badge, dimmed data, "reconnecting").
 - Axis labels are not clipped (for example "0.4 cores", not "4 cores").
 - No dashed threshold line at 0 unless a threshold of 0 was asked for.
 - Provenance footers stay inside their panels in both themes.
+- Charts drawn in the chat are not blank after the theme switch (it happens while the chat is hidden).
+- Badges show their status color (Danger red, Warning amber, OK green, Stale amber), not the default badge color.
 - Text is readable in light theme (no light-on-light).
 
 If a component you changed is not in the playground yet, add it there first (see `add-opskit-component`, step 6).
