@@ -90,9 +90,17 @@ func main() {
 
 	registry := tool.NewRegistry(promAdapter.Specs()...)
 
+	var corsOrigins []string
+	if v := os.Getenv("OPSKIT_CORS_ORIGINS"); v != "" {
+		corsOrigins = strings.Split(v, ",")
+	}
+
+	handler := devIdentityMiddleware(api.NewRouter(registry.ToAPI(identityFromContext), logger))
+	handler = api.CORS(corsOrigins, handler)
+
 	srv := &http.Server{
 		Addr:              addr,
-		Handler:           devIdentityMiddleware(api.NewRouter(registry.ToAPI(identityFromContext), logger)),
+		Handler:           handler,
 		ReadHeaderTimeout: 5 * time.Second,
 	}
 

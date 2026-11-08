@@ -28,6 +28,8 @@ services:
       OPSKIT_ACCESS_FILE: "/etc/opskit/access.yaml"
       OPSKIT_PROM_URL: "http://prometheus:9090"
       OPSKIT_PROM_SYSTEM: "Prometheus · docker compose"
+      # The playground's known local ports (vite dev, vite preview, screenshot.mjs).
+      OPSKIT_CORS_ORIGINS: "http://localhost:5173,http://localhost:4173,http://localhost:4174,http://localhost:4175"
     volumes:
       - ./gateway/deploy/access.yaml:/etc/opskit/access.yaml:ro
     ports:
