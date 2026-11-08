@@ -57,10 +57,10 @@ After changing `packages/core`, rebuild it (`pnpm --filter @opskit/core build`) 
 | Part | State |
 | --- | --- |
 | core: transport, dedupe, mock, `usePromRange` | done |
-| ui: `PromChart`, panel, states, provenance, OpenUI library | done |
+| ui: `PromChart`, `StatTile`, panel, states, provenance, OpenUI library | done |
 | gateway: Tools API skeleton + error contract | done |
 | gateway: auth (OIDC + impersonation), Prometheus/Mimir adapter with namespace injection | next (M1) |
-| StatTile, PodTable, LogTail, EventTimeline, ActionButton | designed, not built |
+| PodTable, LogTail, EventTimeline, ActionButton | designed, not built |
 | MCP server + agent evals | M4 |
 
 Designs for every v1 component and state are on the "OpsKit v1 Components" Claude Design canvas; ask Yoni for the link if you need to compare.

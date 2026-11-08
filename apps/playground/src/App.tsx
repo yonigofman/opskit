@@ -1,8 +1,8 @@
 import { Renderer } from "@openuidev/react-lang";
 import { OpsKitProvider } from "@opskit/core";
-import { opskitLibrary, PromChart } from "@opskit/ui";
+import { opskitLibrary, PromChart, StatTile } from "@opskit/ui";
 import { useEffect, useState } from "react";
-import { recordedAnswer, stateExamples, transport } from "./fixtures";
+import { recordedAnswer, stateExamples, statTileExamples, transport } from "./fixtures";
 
 type Theme = "dark" | "light";
 
@@ -40,6 +40,29 @@ export function App() {
                     unit={"unit" in ex ? ex.unit : undefined}
                     refreshSeconds={"refreshSeconds" in ex ? ex.refreshSeconds : 0}
                     height={160}
+                  />
+                </div>
+              ))}
+            </div>
+          </section>
+          <section className="section">
+            <div className="section__head">
+              <span className="kicker">Component</span>
+              <h2 className="section__title">StatTile, every state</h2>
+              <p className="muted">One headline number per answer, with a sparkline and threshold colors.</p>
+            </div>
+            <div className="grid">
+              {statTileExamples.map((ex) => (
+                <div key={ex.state} className="cell">
+                  <span className="kicker">{ex.state}</span>
+                  <StatTile
+                    label={ex.label}
+                    query={ex.query}
+                    range={"range" in ex ? ex.range : "1h"}
+                    unit={"unit" in ex ? ex.unit : undefined}
+                    warnAt={"warnAt" in ex ? ex.warnAt : undefined}
+                    dangerAt={"dangerAt" in ex ? ex.dangerAt : undefined}
+                    refreshSeconds={"refreshSeconds" in ex ? ex.refreshSeconds : 0}
                   />
                 </div>
               ))}

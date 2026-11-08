@@ -1,7 +1,8 @@
 import { createLibrary, defineComponent, type PromptOptions } from "@openuidev/react-lang";
-import { promChartProps } from "@opskit/core";
+import { promChartProps, statTileProps } from "@opskit/core";
 import { z } from "zod/v4";
 import { PromChart as PromChartView } from "./components/prom-chart.js";
+import { StatTile as StatTileView } from "./components/stat-tile.js";
 
 const Heading = defineComponent({
   name: "Heading",
@@ -24,33 +25,41 @@ const PromChart = defineComponent({
   component: ({ props }) => <PromChartView {...props} />,
 });
 
+const StatTile = defineComponent({
+  name: "StatTile",
+  description: "A single live number with a sparkline. Use for one headline figure; use PromChart for a trend over time.",
+  props: statTileProps,
+  component: ({ props }) => <StatTileView {...props} />,
+});
+
 const Row = defineComponent({
   name: "Row",
   description: "Places charts side by side; wraps on narrow screens.",
-  props: z.object({ children: z.array(z.union([PromChart.ref, Text.ref])) }),
+  props: z.object({ children: z.array(z.union([PromChart.ref, StatTile.ref, Text.ref])) }),
   component: ({ props, renderNode }) => <div className="ok-row">{renderNode(props.children)}</div>,
 });
 
 const Stack = defineComponent({
   name: "Stack",
   description: "The root: components top to bottom, in the order a reader should see them.",
-  props: z.object({ children: z.array(z.union([Heading.ref, Text.ref, PromChart.ref, Row.ref])) }),
+  props: z.object({ children: z.array(z.union([Heading.ref, Text.ref, PromChart.ref, StatTile.ref, Row.ref])) }),
   component: ({ props, renderNode }) => <div className="ok-stack">{renderNode(props.children)}</div>,
 });
 
 /** Every component an agent can render through OpsKit. Kept small on purpose: fewer choices, better output. */
 export const opskitLibrary = createLibrary({
   root: "Stack",
-  components: [Stack, Row, Heading, Text, PromChart],
+  components: [Stack, Row, Heading, Text, PromChart, StatTile],
   componentGroups: [
     { name: "Layout", components: ["Stack", "Row", "Heading", "Text"] },
     {
       name: "Live ops data",
-      components: ["PromChart"],
+      components: ["PromChart", "StatTile"],
       notes: [
         "- Components fetch their own data. Pass queries, never values you computed or remember.",
         "- Write data components before Text so they start loading while you write.",
         "- Use the namespace and labels you found while investigating; the viewer's access is enforced for you.",
+        "- StatTile for one headline number, PromChart for how it moved over the range.",
       ],
     },
   ],

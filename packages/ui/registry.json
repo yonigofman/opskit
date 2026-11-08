@@ -27,6 +27,17 @@
       "files": [
         { "path": "src/components/prom-chart.tsx", "type": "registry:component", "target": "components/opskit/prom-chart.tsx" }
       ]
+    },
+    {
+      "name": "stat-tile",
+      "type": "registry:component",
+      "title": "StatTile",
+      "description": "A single live number from a PromQL query, with a sparkline, threshold colors and every OpsKit state.",
+      "dependencies": ["@opskit/core"],
+      "registryDependencies": ["https://raw.githubusercontent.com/yonigofman/opskit/main/packages/ui/public/r/opskit-base.json"],
+      "files": [
+        { "path": "src/components/stat-tile.tsx", "type": "registry:component", "target": "components/opskit/stat-tile.tsx" }
+      ]
     }
   ]
 }

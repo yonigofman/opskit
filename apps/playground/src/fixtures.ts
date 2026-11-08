@@ -1,4 +1,12 @@
-import { GatewayError, mockTransport, type PromRangeArgs, type PromRangeResult, type PromSeries } from "@opskit/core";
+import {
+  GatewayError,
+  mockTransport,
+  type PromInstantArgs,
+  type PromInstantResult,
+  type PromRangeArgs,
+  type PromRangeResult,
+  type PromSeries,
+} from "@opskit/core";
 
 /**
  * A fake cluster: shop/checkout, where rev 42 rolled out 28 minutes ago and
@@ -77,12 +85,60 @@ function promRange(raw: Record<string, unknown>): PromRangeResult | Promise<Prom
   return { series, provenance: provenance(args, 30 + Math.round(noise(args.end, 4) * 60)) };
 }
 
-export const transport = mockTransport({ prom_range: promRange }, { latencyMs: 450 });
+function instantProvenance(query: string, durationMs: number): PromInstantResult["provenance"] {
+  return {
+    source: "prometheus",
+    system: "Mimir · tenant shop",
+    query,
+    identity: IDENTITY,
+    injected: 'namespace=~"shop"',
+    fetchedAt: Date.now(),
+    cache: durationMs < 40 ? "hit" : "miss",
+    durationMs,
+  };
+}
+
+let flakyInstantCalls = 0;
+
+function promInstant(raw: Record<string, unknown>): PromInstantResult | Promise<PromInstantResult> {
+  const args = raw as unknown as PromInstantArgs;
+  const q = args.query;
+  const now = Date.now() / 1000;
+
+  if (q.includes("payments")) {
+    throw new GatewayError("forbidden", "No get on metrics in payments.", { identity: IDENTITY });
+  }
+  const extraParen = q.lastIndexOf(")))");
+  if (q.startsWith("sum(rate(") && extraParen > 0) {
+    throw new GatewayError("invalid_query", "Parse error: unexpected )", { position: q.length - 1 });
+  }
+  if (q.includes("orders-worker")) {
+    return { value: null, provenance: instantProvenance(q, 18) };
+  }
+  if (q.includes("slow_backend")) {
+    return new Promise<never>(() => {}); // never answers: shows the loading state
+  }
+  if (q.includes("flaky")) {
+    flakyInstantCalls++;
+    if (flakyInstantCalls > 1) throw new GatewayError("unavailable", "Mimir query timed out");
+  }
+
+  let value: number;
+  if (q.includes("histogram_quantile")) value = 1.35 + noise(now, 1) * 0.35;
+  else if (q.includes('code=~"5..') || q.includes("code=~\\\"5..")) value = 4 + noise(now, 2) * 1.2;
+  else if (q.includes("container_cpu_usage")) value = 0.42 + noise(now, 3) * 0.06;
+  else value = 305 + noise(now, 9) * 18;
+
+  return { value, provenance: instantProvenance(q, 30 + Math.round(noise(now, 4) * 60)) };
+}
+
+export const transport = mockTransport({ prom_range: promRange, prom_instant: promInstant }, { latencyMs: 450 });
 
 /** What a model wrote for "why is checkout slow?", replayed token by token. */
 export const recordedAnswer = [
-  "root = Stack([title, latency, row, why])",
+  "root = Stack([title, stat, latency, row, why])",
   'title = Heading("Checkout slowed down right after rev 42")',
+  'stat = StatTile("p95 latency · checkout", "histogram_quantile(0.95, sum by (le) (rate(http_request_duration_seconds_bucket{namespace=\\"shop\\", app=\\"checkout\\"}[5m])))", "15m", "s", null, 0.5)',
   'latency = PromChart("p95 latency · checkout", "histogram_quantile(0.95, sum by (le) (rate(http_request_duration_seconds_bucket{namespace=\\"shop\\", app=\\"checkout\\"}[5m])))", "1h", "s", null, 0.5)',
   "row = Row([errors, cpu])",
   'errors = PromChart("5xx error rate · checkout", "100 * sum(rate(http_requests_total{namespace=\\"shop\\", app=\\"checkout\\", code=~\\"5..\\"}[5m])) / sum(rate(http_requests_total{namespace=\\"shop\\", app=\\"checkout\\"}[5m]))", "1h", "%", 1, 2)',
@@ -98,4 +154,14 @@ export const stateExamples = [
   { state: "Error", title: "Error rate · checkout", query: 'sum(rate(http_requests_total{code=~"5.."}[5m])))' },
   { state: "Forbidden", title: "p95 latency · payments", query: 'histogram_quantile(0.95, sum by (le) (rate(http_request_duration_seconds_bucket{namespace="payments"}[5m])))', unit: "s" },
   { state: "Stale", title: "Requests · cart", query: 'sum(rate(http_requests_total{namespace="shop", app="cart", flaky="1"}[5m]))', unit: "req/s", refreshSeconds: 4 },
+] as const;
+
+/** One StatTile per state, for the states gallery. */
+export const statTileExamples = [
+  { state: "Live", label: "p95 latency · checkout", query: 'histogram_quantile(0.95, sum by (le) (rate(http_request_duration_seconds_bucket{namespace="shop", app="checkout"}[5m])))', unit: "s", warnAt: 0.3, dangerAt: 0.5 },
+  { state: "Loading", label: "p99 latency · search", query: "histogram_quantile(0.99, slow_backend)", unit: "s" },
+  { state: "Empty", label: "Queue depth · orders", query: 'sum(queue_depth{namespace="shop", job="orders-worker"})', range: "15m" },
+  { state: "Error", label: "Error rate · checkout", query: 'sum(rate(http_requests_total{code=~"5.."}[5m])))' },
+  { state: "Forbidden", label: "p95 latency · payments", query: 'histogram_quantile(0.95, sum by (le) (rate(http_request_duration_seconds_bucket{namespace="payments"}[5m])))', unit: "s" },
+  { state: "Stale", label: "Requests · cart", query: 'sum(rate(http_requests_total{namespace="shop", app="cart", flaky="1"}[5m]))', unit: "req/s", refreshSeconds: 4 },
 ] as const;

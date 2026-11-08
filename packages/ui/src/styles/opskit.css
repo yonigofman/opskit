@@ -142,6 +142,8 @@
   text-transform: uppercase;
 }
 .ok-badge--warning { color: var(--ok-warning); background: color-mix(in srgb, var(--ok-warning) 12%, transparent); }
+.ok-badge--danger { color: var(--ok-danger); background: color-mix(in srgb, var(--ok-danger) 12%, transparent); }
+.ok-badge--success { color: var(--ok-success); background: color-mix(in srgb, var(--ok-success) 12%, transparent); }
 
 .ok-pip { width: 7px; height: 7px; border-radius: 9999px; flex: none; background: var(--ok-ink-subtle); }
 .ok-pip--live { background: var(--ok-success); animation: ok-pulse 1.6s ease-in-out infinite; }
@@ -281,6 +283,23 @@
 .ok-chart .u-cursor-pt { position: absolute; top: 0; left: 0; border-radius: 50%; border: 0 solid; pointer-events: none; will-change: transform; background-clip: padding-box !important; }
 .ok-chart .u-select { position: absolute; pointer-events: none; background: color-mix(in srgb, var(--ok-ink) 8%, transparent); }
 .ok-chart .u-off { display: none; }
+
+/* ---------- stat tile ---------- */
+
+.ok-tile { display: flex; flex-direction: column; gap: 10px; min-height: 96px; justify-content: center; }
+.ok-tile__value { display: flex; align-items: baseline; gap: 10px; }
+.ok-tile__number {
+  font: 600 32px/36px var(--ok-font-mono);
+  letter-spacing: -0.01em;
+  font-variant-numeric: tabular-nums;
+  color: var(--ok-ink);
+}
+.ok-tile__value--warning .ok-tile__number { color: var(--ok-warning); }
+.ok-tile__value--danger .ok-tile__number { color: var(--ok-danger); }
+.ok-tile__spark { display: block; width: 100%; height: 32px; overflow: visible; }
+.ok-tile__spark polyline { stroke: var(--ok-success); }
+.ok-tile__spark--warning polyline { stroke: var(--ok-warning); }
+.ok-tile__spark--danger polyline { stroke: var(--ok-danger); }
 
 /* ---------- layout used by the OpenUI library ---------- */
 

@@ -39,6 +39,16 @@ export interface PromRangeResult {
   provenance: Provenance;
 }
 
+export interface PromInstantArgs {
+  query: string;
+}
+
+export interface PromInstantResult {
+  /** null when the query evaluated to no series. */
+  value: number | null;
+  provenance: Provenance;
+}
+
 /**
  * Every OpsKit component is in exactly one of these states.
  * - loading: first fetch in flight

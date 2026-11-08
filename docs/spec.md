@@ -90,7 +90,7 @@ v1 answers "what's wrong right now". Each component takes refs and fetches its o
 
 | Component | Main props | Data | Built on |
 | --- | --- | --- | --- |
-| `StatTile` | label, query, unit?, range?, warnAt?, dangerAt? | `prom_instant` + `prom_range` for the sparkline | |
+| `StatTile` | label, query, unit?, range?, warnAt?, dangerAt? | `prom_instant` + `prom_range` for the sparkline | **built** |
 | `PromChart` | title, query, range?, unit?, warnAt?, dangerAt? | `prom_range` | **built** |
 | `PodTable` | namespace, selector, columns? | `k8s_list` + watch | |
 | `LogTail` | query, range?, follow? | `loki_range` + `loki_tail` | |
